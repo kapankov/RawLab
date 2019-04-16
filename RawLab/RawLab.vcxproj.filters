@@ -62,6 +62,9 @@
     <ClInclude Include="jpeg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="rawlab.ui">
@@ -84,5 +87,8 @@
     <QtMoc Include="histogram_widget.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="version.rc2" />
   </ItemGroup>
 </Project>

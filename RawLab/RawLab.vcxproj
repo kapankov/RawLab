@@ -121,6 +121,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_rawlab.h" />
+    <ClInclude Include="version.h" />
     <QtMoc Include="rawlab.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </Message>
@@ -174,6 +175,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rawlab.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="version.rc2" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

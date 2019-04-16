@@ -1,0 +1,54 @@
+#include "version.h"
+
+#ifdef APSTUDIO_INVOKED
+    #error this file is not editable by Visual C++
+#endif //APSTUDIO_INVOKED
+
+#define IS_VER_FOR_EN_LANG
+//#ifndef IS_VER_FOR_RU_LANG
+
+#define VS_FF_FINALRELEASE        0x00000000L
+
+1 VERSIONINFO
+ FILEVERSION    APP_VER
+ PRODUCTVERSION APP_VER
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS VS_FF_FINALRELEASE
+#endif
+ FILEOS         VOS__WINDOWS32
+ FILETYPE       VFT_DLL // VFT_APP
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+#ifdef IS_VER_FOR_RU_LANG
+        BLOCK "041904e3"
+#else
+        BLOCK "040904b0"
+#endif
+        BEGIN
+            VALUE "OriginalFilename", ORIGFILENAME
+            VALUE "FileDescription", FILEDESCRIPTION
+            VALUE "FileVersion", VER_STR(APP_VER)
+            VALUE "LegalCopyright", LEGALCOPYRIGHT
+            VALUE "ProductSupport", PRODUCTSUPPORT
+        END
+    END
+#ifdef IS_VER_FOR_EN_LANG
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+#endif
+#ifdef IS_VER_FOR_RU_LANG
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x419, 1251
+    END
+#endif
+
+END
+

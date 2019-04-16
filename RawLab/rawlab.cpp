@@ -2,6 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include "stdafx.h"
+#include "version.h"
 
 RawLab::RawLab(QWidget *parent)
 	: QMainWindow(parent)
@@ -19,9 +20,9 @@ RawLab::RawLab(QWidget *parent)
 	statusBar()->addPermanentWidget(m_plblScale, 2);
 	statusBar()->addPermanentWidget(m_plblInfo,8);
 
-	m_plblState->setText("Ready");
-	m_plblProgress->setText("Not running");
-	m_plblInfo->setText("Some information");
+	m_plblState->setText(tr("Ready"));
+	m_plblProgress->setText(tr("Not running"));
+	m_plblInfo->setText(tr("Some information"));
 
 	connect(ui.action_Exit, SIGNAL(triggered()), this, SLOT(onExit()));
 	connect(ui.action_Open, SIGNAL(triggered()), this, SLOT(onOpen()));
@@ -53,7 +54,7 @@ void RawLab::onOpen()
 
 void RawLab::SetZoomStatus(int prc)
 {
-	m_plblScale->setText(QString("Scale: %1%").arg(QString::number(prc)));
+	m_plblScale->setText(QString(tr("Scale: %1%")).arg(QString::number(prc)));
 }
 
 void RawLab::onExit()
@@ -63,8 +64,11 @@ void RawLab::onExit()
 
 void RawLab::onAbout()
 {
-	QMessageBox::about(this, "RawLab", 
-		"RawLab ver.0.1,\n"
-		"Copyright (C) 2017-2019 Konstantin A. Pankov\n"
-		"GNU GPL v.3\n");
+	QMessageBox::about(this, APPNAME,
+		QString(APPNAME " ver. %1.%2.%3 build %4\n"
+		"Copyright(C) " LEGALCOPYRIGHT "\n"
+		PRODUCTSUPPORT "\n"
+		"\n"
+		"IJG JPEG LIBRARY (libjpeg) ver. 8d\n"
+		"Copyright(C) 1991 - 2012, Thomas G.Lane, Guido Vollbeding\n").arg(QString::number(MAJOR_VER), QString::number(MINOR_VER), QString::number(RELEASE_VER), QString::number(BUILD_VER)));
 }
