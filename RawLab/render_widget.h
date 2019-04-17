@@ -32,6 +32,7 @@ public slots:
 	void onZoomOut();
 	void onFitToWindow();
 	void onUnZoom();
+	void onCenter();
 protected:
 	void initializeGL() override;
 	void paintGL() override;

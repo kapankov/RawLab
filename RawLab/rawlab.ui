@@ -291,6 +291,7 @@ margin-right: 12px;
     <addaction name="actionZoom_Out"/>
     <addaction name="actionFit_To_Window"/>
     <addaction name="actionZoom_100"/>
+    <addaction name="actionCenter"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_View"/>
@@ -322,6 +323,7 @@ margin-right: 12px;
    <addaction name="actionZoom_Out"/>
    <addaction name="actionFit_To_Window"/>
    <addaction name="actionZoom_100"/>
+   <addaction name="actionCenter"/>
    <addaction name="separator"/>
    <addaction name="action_About"/>
   </widget>
@@ -409,6 +411,16 @@ margin-right: 12px;
    </property>
    <property name="shortcut">
     <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="actionCenter">
+   <property name="icon">
+    <iconset>
+     <normalon>:/images/Resources/center.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Center</string>
    </property>
   </action>
  </widget>

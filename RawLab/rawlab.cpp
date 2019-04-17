@@ -30,6 +30,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionZoom_Out, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomOut()));
 	connect(ui.actionFit_To_Window, SIGNAL(triggered()), ui.openGLWidget, SLOT(onFitToWindow()));
 	connect(ui.actionZoom_100, SIGNAL(triggered()), ui.openGLWidget, SLOT(onUnZoom()));
+	connect(ui.actionCenter, SIGNAL(triggered()), ui.openGLWidget, SLOT(onCenter()));
 
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 }

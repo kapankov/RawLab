@@ -243,8 +243,8 @@ void RenderWidget::onFitToWindow()
 {
 	if (!m_pImgBuff) return;
 	m_dblZoom = .0f;
-	update();
 	resetCenter();
+	update();
 	onZoomEvent();
 }
 
@@ -252,7 +252,14 @@ void RenderWidget::onUnZoom()
 {
 	if (!m_pImgBuff) return;
 	m_dblZoom = 1.0f;
-	update();
 	resetCenter();
+	update();
 	onZoomEvent();
+}
+
+void RenderWidget::onCenter()
+{
+	if (!m_pImgBuff) return;
+	resetCenter();
+	update();
 }
