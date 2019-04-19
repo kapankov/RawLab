@@ -4,9 +4,9 @@
 struct RgbBuff
 {
 	unsigned char* m_buff;
-	unsigned int m_uiWidth;
-	unsigned int m_uiHeight;
-	RgbBuff() : m_buff(nullptr), m_uiWidth(0), m_uiHeight(0) {}
+	int m_width;
+	int m_height;
+	RgbBuff() : m_buff(nullptr), m_width(0), m_height(0) {}
 	~RgbBuff() { delete[] m_buff; }
 };
 

@@ -290,7 +290,7 @@ margin-right: 12px;
     <addaction name="actionZoom_In"/>
     <addaction name="actionZoom_Out"/>
     <addaction name="actionFit_To_Window"/>
-    <addaction name="actionZoom_100"/>
+    <addaction name="actionZoomToNormal"/>
     <addaction name="actionCenter"/>
    </widget>
    <addaction name="menu_File"/>
@@ -322,7 +322,7 @@ margin-right: 12px;
    <addaction name="actionZoom_In"/>
    <addaction name="actionZoom_Out"/>
    <addaction name="actionFit_To_Window"/>
-   <addaction name="actionZoom_100"/>
+   <addaction name="actionZoomToNormal"/>
    <addaction name="actionCenter"/>
    <addaction name="separator"/>
    <addaction name="action_About"/>
@@ -400,7 +400,7 @@ margin-right: 12px;
     <string>Ctrl+0</string>
    </property>
   </action>
-  <action name="actionZoom_100">
+  <action name="actionZoomToNormal">
    <property name="icon">
     <iconset>
      <normalon>:/images/Resources/unzoom.png</normalon>

@@ -17,10 +17,10 @@ class RenderWidget : public QOpenGLWidget
 
 	// scroll support
 	QPoint	m_DragPoint;
-	// координаты центра изображения
+	// координаты сдвига изображения
 	// обновляются при каждом зуме, сдвиге и скролле
 	// учитываются в paintGL()
-	QPointF	m_CenterCoord;
+	QPoint	m_ScrollOffset;
 
 public:
 	RenderWidget(QWidget *parent = 0);
@@ -31,7 +31,7 @@ public slots:
 	void onZoomIn();
 	void onZoomOut();
 	void onFitToWindow();
-	void onUnZoom();
+	void onZoomToNormal();
 	void onCenter();
 protected:
 	void initializeGL() override;
@@ -47,6 +47,7 @@ protected:
 	void onZoomEvent();
 	GLdouble getZoom(int width, int height) const;
 	void resetCenter();
+
 };
 
 #endif

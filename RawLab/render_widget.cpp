@@ -37,11 +37,11 @@ void RenderWidget::SetImageJpegFile(QString filename)
 		// glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // по умолчанию выравнивание 32-битное
 		glTexImage2D(
 			GL_TEXTURE_2D, 0,
-			GL_RGB8, m_pImgBuff->m_uiWidth, m_pImgBuff->m_uiHeight, 0,
+			GL_RGB8, m_pImgBuff->m_width, m_pImgBuff->m_height, 0,
 			GL_RGB, GL_UNSIGNED_BYTE, m_pImgBuff->m_buff);
 		//glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);	// GL_LINEAR_MIPMAP_LINEAR
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	// GL_NEAREST
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// GL_LINEAR
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -71,33 +71,36 @@ void RenderWidget::paintGL()
 	if (!m_tex_id || !m_pImgBuff)
 		return;
 
+	QRectF rctImg(-static_cast<qreal>(m_pImgBuff->m_width) + 0.5,	// left
+		static_cast<qreal>(m_pImgBuff->m_height) - 0.5,	// top
+		static_cast<qreal>(m_pImgBuff->m_width*2),	// width
+		-static_cast<qreal>(m_pImgBuff->m_height*2));	// height
+
+	GLdouble dblZoom = m_dblZoom ? m_dblZoom : getZoom(width(), height());
+
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, m_tex_id);
 
-	GLdouble wpos = static_cast<GLdouble>(m_pImgBuff->m_uiWidth) / width();
-	GLdouble hpos = static_cast<GLdouble>(m_pImgBuff->m_uiHeight) / height();
-	GLdouble dblZoom = m_dblZoom ? m_dblZoom : getZoom(width(), height());
-
-//	glMatrixMode(GL_MODELVIEW);
-//	glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 
 	glPushMatrix();
 
-	if (m_CenterCoord.x() || m_CenterCoord.y()) glTranslated(m_CenterCoord.x(), m_CenterCoord.y(), 0.0);
+	if (m_ScrollOffset.x() || m_ScrollOffset.y()) glTranslated(m_ScrollOffset.x(), m_ScrollOffset.y(), 0.0);
 
 	if (dblZoom != 1.0) glScaled(dblZoom, dblZoom, 1.0);
 
 	glBegin(GL_QUADS);
-	glTexCoord2d(0, 0);	// позиция текстуры
-	glVertex3d(-wpos, -hpos, .0f);
-	glTexCoord2d(1, 0);
-	glVertex3d(wpos, -hpos, .0f);
-	glTexCoord2d(1, 1);
-	glVertex3d(wpos, hpos, .0f);
-	glTexCoord2d(0, 1);
-	glVertex3d(-wpos, hpos, .0f);
+		glTexCoord2d(0, 0);	// bottom-left
+		glVertex3d(rctImg.left(), rctImg.bottom(), .0f);
+		glTexCoord2d(1, 0);	// bottom-right
+		glVertex3d(rctImg.right(), rctImg.bottom(), .0f);
+		glTexCoord2d(1, 1);	// top-right
+		glVertex3d(rctImg.right(), rctImg.top(), .0f);
+		glTexCoord2d(0, 1);	// top-left
+		glVertex3d(rctImg.left(), rctImg.top(), .0f);
 	glEnd();
 
 	glPopMatrix();
@@ -108,6 +111,15 @@ void RenderWidget::paintGL()
 void RenderWidget::resizeGL(int width, int height)
 {
 	glViewport(0, 0, width, height);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	glOrtho(-static_cast<GLdouble>(width) + 0.5,	// left
+		static_cast<GLdouble>(width) - 0.5,	// right
+		-static_cast<GLdouble>(height) + 0.5,	// bottom
+		static_cast<GLdouble>(height) - 0.5,	// top
+		1.0, -1.0);
 
 	onZoomEvent();
 }
@@ -122,7 +134,7 @@ void RenderWidget::mousePressEvent(QMouseEvent * event)
 
 void RenderWidget::mouseReleaseEvent(QMouseEvent * event)
 {
-//	QMessageBox::information(this, "Mouse event", "mouseMoveEvent", QMessageBox::Ok);
+//	QMessageBox::information(this, "Mouse event", "mouseReleaseEvent", QMessageBox::Ok);
 }
 
 void RenderWidget::mouseDoubleClickEvent(QMouseEvent * event)
@@ -130,7 +142,7 @@ void RenderWidget::mouseDoubleClickEvent(QMouseEvent * event)
 	if (event->button() == Qt::LeftButton)
 	{
 		if (m_dblZoom) onFitToWindow();
-		else onUnZoom();
+		else onZoomToNormal();
 	}
 }
 
@@ -141,16 +153,13 @@ void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 		QPoint ptMousePos = event->pos();
 
 		if (int iX = (ptMousePos.x() - m_DragPoint.x()))
-		{
-			m_CenterCoord.setX(m_CenterCoord.x() + 2.0 * static_cast<qreal>(iX) / width());
-		}
+			m_ScrollOffset.setX(m_ScrollOffset.x() + 2 * iX);
 
 		if (int iY = (ptMousePos.y() - m_DragPoint.y()))
-		{
-			m_CenterCoord.setY(m_CenterCoord.y() - 2.0 * static_cast<qreal>(iY) / height());
-		}
+			m_ScrollOffset.setY(m_ScrollOffset.y() - 2.0 * iY);
 
 		m_DragPoint = ptMousePos;
+
 		update();
 	}
 }
@@ -198,7 +207,7 @@ GLdouble RenderWidget::getZoom(int width, int height) const
 	{
 		if (!m_dblZoom)
 		{
-			GLdouble zoom = std::max(static_cast<GLdouble>(m_pImgBuff->m_uiWidth) / width, static_cast<GLdouble>(m_pImgBuff->m_uiHeight) / height);
+			GLdouble zoom = std::max(static_cast<GLdouble>(m_pImgBuff->m_width) / width, static_cast<GLdouble>(m_pImgBuff->m_height) / height);
 			return 1.0f / (zoom ? zoom : 1.0f);
 		}
 		else return m_dblZoom;
@@ -208,8 +217,8 @@ GLdouble RenderWidget::getZoom(int width, int height) const
 
 void RenderWidget::resetCenter()
 {
-	m_CenterCoord.setX(0);
-	m_CenterCoord.setY(0);
+	m_ScrollOffset.setX(0);
+	m_ScrollOffset.setY(0);
 }
 
 void RenderWidget::onZoomIn()
@@ -218,7 +227,7 @@ void RenderWidget::onZoomIn()
 	if (!m_dblZoom)
 		m_dblZoom = getZoom(width(), height());
 
-	if ((static_cast<int>(m_dblZoom * m_pImgBuff->m_uiWidth) < 100000 && static_cast<int>(m_dblZoom * m_pImgBuff->m_uiHeight) < 100000) && m_dblZoom < 20)
+	if ((static_cast<int>(m_dblZoom * m_pImgBuff->m_width) < 100000 && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) < 100000) && m_dblZoom < 20)
 	{
 		m_dblZoom *= m_dblZoomFactor;
 		update();
@@ -231,7 +240,7 @@ void RenderWidget::onZoomOut()
 	if (!m_pImgBuff) return;
 	if (!m_dblZoom)
 		m_dblZoom = getZoom(width(), height());
-	if (static_cast<int>(m_dblZoom * m_pImgBuff->m_uiWidth) > 100 && static_cast<int>(m_dblZoom * m_pImgBuff->m_uiHeight) > 100)
+	if (static_cast<int>(m_dblZoom * m_pImgBuff->m_width) > 100 && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) > 100)
 	{
 		m_dblZoom /= m_dblZoomFactor;
 		update();
@@ -248,7 +257,7 @@ void RenderWidget::onFitToWindow()
 	onZoomEvent();
 }
 
-void RenderWidget::onUnZoom()
+void RenderWidget::onZoomToNormal()
 {
 	if (!m_pImgBuff) return;
 	m_dblZoom = 1.0f;

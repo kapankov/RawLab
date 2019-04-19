@@ -81,8 +81,8 @@ RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
 
-	ptr->m_uiWidth = cinfo.output_width;
-	ptr->m_uiHeight = cinfo.output_height;
+	ptr->m_width = cinfo.output_width;
+	ptr->m_height = cinfo.output_height;
 
 	return ptr;
 }
