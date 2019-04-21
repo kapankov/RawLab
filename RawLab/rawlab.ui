@@ -287,10 +287,22 @@ margin-right: 12px;
     <property name="title">
      <string>&amp;View</string>
     </property>
-    <addaction name="actionZoom_In"/>
-    <addaction name="actionZoom_Out"/>
-    <addaction name="actionFit_To_Window"/>
-    <addaction name="actionZoomToNormal"/>
+    <widget class="QMenu" name="menuZoom">
+     <property name="title">
+      <string>Zoom</string>
+     </property>
+     <addaction name="actionZoom_In"/>
+     <addaction name="actionZoom_Out"/>
+     <addaction name="actionFit_To_Window"/>
+     <addaction name="separator"/>
+     <addaction name="actionZoom_25"/>
+     <addaction name="actionZoom_50"/>
+     <addaction name="actionZoomToNormal"/>
+     <addaction name="actionZoom_200"/>
+     <addaction name="actionZoom_400"/>
+     <addaction name="actionZoom_800"/>
+    </widget>
+    <addaction name="menuZoom"/>
     <addaction name="actionCenter"/>
    </widget>
    <addaction name="menu_File"/>
@@ -421,6 +433,31 @@ margin-right: 12px;
    </property>
    <property name="text">
     <string>Center</string>
+   </property>
+  </action>
+  <action name="actionZoom_25">
+   <property name="text">
+    <string>Zoom 25%</string>
+   </property>
+  </action>
+  <action name="actionZoom_50">
+   <property name="text">
+    <string>Zoom 50%</string>
+   </property>
+  </action>
+  <action name="actionZoom_200">
+   <property name="text">
+    <string>Zoom 200%</string>
+   </property>
+  </action>
+  <action name="actionZoom_400">
+   <property name="text">
+    <string>Zoom 400%</string>
+   </property>
+  </action>
+  <action name="actionZoom_800">
+   <property name="text">
+    <string>Zoom 800%</string>
    </property>
   </action>
  </widget>

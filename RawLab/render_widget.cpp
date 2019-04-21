@@ -8,13 +8,13 @@ RenderWidget::RenderWidget(QWidget * parent)
 	: QOpenGLWidget(parent)
 	, m_tex_id(0)
 	, m_dblZoom(.0)
+	, m_ExtraOffset(200.0)
 {
 	resetCenter();
 }
 
 RenderWidget::~RenderWidget()
 {
-
 }
 
 void RenderWidget::SetImageJpegFile(QString filename)
@@ -156,7 +156,9 @@ void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 			m_ScrollOffset.setX(m_ScrollOffset.x() + 2 * iX);
 
 		if (int iY = (ptMousePos.y() - m_DragPoint.y()))
-			m_ScrollOffset.setY(m_ScrollOffset.y() - 2.0 * iY);
+			m_ScrollOffset.setY(m_ScrollOffset.y() - 2 * iY);
+
+		CorrectOffset();
 
 		m_DragPoint = ptMousePos;
 
@@ -198,6 +200,16 @@ void RenderWidget::wheelEvent(QWheelEvent * event)
 
 void RenderWidget::onZoomEvent()
 {
+	if (m_pImgBuff)
+	{
+		// определим новое ограничение для скролла
+		GLdouble zoom = getZoom(width(), height());
+		qreal w = zoom * m_pImgBuff->m_width;
+		qreal h = zoom * m_pImgBuff->m_height;
+		m_ScrollLimit.setX(w > width() ? w - width() + m_ExtraOffset : 0.0);
+		m_ScrollLimit.setY(h > height() ? h - height() + m_ExtraOffset : 0.0);
+		CorrectOffset();
+	}
 	static_cast<RawLab*>(QWidget::window())->SetZoomStatus(getZoom(width(), height()) * 100);
 }
 
@@ -221,17 +233,26 @@ void RenderWidget::resetCenter()
 	m_ScrollOffset.setY(0);
 }
 
+void RenderWidget::CorrectOffset()
+{
+	// m_ScrollLimit checking
+	if (m_ScrollOffset.x() > m_ScrollLimit.x()) m_ScrollOffset.setX(m_ScrollLimit.x());
+	if (m_ScrollOffset.x() < -m_ScrollLimit.x()) m_ScrollOffset.setX(-m_ScrollLimit.x());
+	if (m_ScrollOffset.y() > m_ScrollLimit.y()) m_ScrollOffset.setY(m_ScrollLimit.y());
+	if (m_ScrollOffset.y() < -m_ScrollLimit.y()) m_ScrollOffset.setY(-m_ScrollLimit.y());
+}
+
 void RenderWidget::onZoomIn()
 {
 	if (!m_pImgBuff) return;
 	if (!m_dblZoom)
 		m_dblZoom = getZoom(width(), height());
 
-	if ((static_cast<int>(m_dblZoom * m_pImgBuff->m_width) < 100000 && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) < 100000) && m_dblZoom < 20)
+	if ((static_cast<int>(m_dblZoom * m_pImgBuff->m_width) < m_MaxZoomPix && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) < m_MaxZoomPix) && m_dblZoom < 20)
 	{
 		m_dblZoom *= m_dblZoomFactor;
-		update();
 		onZoomEvent();
+		update();
 	}
 }
 
@@ -243,8 +264,8 @@ void RenderWidget::onZoomOut()
 	if (static_cast<int>(m_dblZoom * m_pImgBuff->m_width) > 100 && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) > 100)
 	{
 		m_dblZoom /= m_dblZoomFactor;
-		update();
 		onZoomEvent();
+		update();
 	}
 }
 
@@ -253,8 +274,48 @@ void RenderWidget::onFitToWindow()
 	if (!m_pImgBuff) return;
 	m_dblZoom = .0f;
 	resetCenter();
-	update();
 	onZoomEvent();
+	update();
+}
+
+void RenderWidget::onZoom_25()
+{
+	if (!m_pImgBuff) return;
+	m_dblZoom = 0.25f;
+	onZoomEvent();
+	update();
+}
+
+void RenderWidget::onZoom_50()
+{
+	if (!m_pImgBuff) return;
+	m_dblZoom = 0.50f;
+	onZoomEvent();
+	update();
+}
+
+void RenderWidget::onZoom_200()
+{
+	if (!m_pImgBuff) return;
+	m_dblZoom = 2.0f;
+	onZoomEvent();
+	update();
+}
+
+void RenderWidget::onZoom_400()
+{
+	if (!m_pImgBuff) return;
+	m_dblZoom = 4.0f;
+	onZoomEvent();
+	update();
+}
+
+void RenderWidget::onZoom_800()
+{
+	if (!m_pImgBuff) return;
+	m_dblZoom = 8.0f;
+	onZoomEvent();
+	update();
 }
 
 void RenderWidget::onZoomToNormal()
@@ -262,8 +323,8 @@ void RenderWidget::onZoomToNormal()
 	if (!m_pImgBuff) return;
 	m_dblZoom = 1.0f;
 	resetCenter();
-	update();
 	onZoomEvent();
+	update();
 }
 
 void RenderWidget::onCenter()

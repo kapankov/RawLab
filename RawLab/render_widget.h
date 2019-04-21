@@ -4,12 +4,19 @@
 #include <QObject>
 #include <QtWidgets/QOpenGLWidget>
 
+// задавать настройками 
+// режим интерполяции
+// зум-фактор
+// максимум и минимум зума
+// доп. смещение при скроле
+
 class RenderWidget : public QOpenGLWidget
 {
 	Q_OBJECT
 
 	// private members
-	const GLdouble m_dblZoomFactor = 1.5f;
+	const double m_dblZoomFactor = 2.0;
+	const double m_MaxZoomPix = 100000.0;
 
 	GLuint	m_tex_id;	// OpenGL texture id
 	GLdouble	m_dblZoom;	// Zoom factor, 0 - fit to window
@@ -20,8 +27,13 @@ class RenderWidget : public QOpenGLWidget
 	// координаты сдвига изображения
 	// обновляются при каждом зуме, сдвиге и скролле
 	// учитываются в paintGL()
-	QPoint	m_ScrollOffset;
-
+	QPointF	m_ScrollOffset;
+	// нужен для скрола(+moving)
+	// для того, что ограничивать смещение изображения в viewport
+	QPointF	m_ScrollLimit;
+	// дополнительное смещение (поля) изображение при скролле
+	qreal m_ExtraOffset;
+	
 public:
 	RenderWidget(QWidget *parent = 0);
 	~RenderWidget();
@@ -31,7 +43,12 @@ public slots:
 	void onZoomIn();
 	void onZoomOut();
 	void onFitToWindow();
+	void onZoom_25();
+	void onZoom_50();
 	void onZoomToNormal();
+	void onZoom_200();
+	void onZoom_400();
+	void onZoom_800();
 	void onCenter();
 protected:
 	void initializeGL() override;
@@ -47,7 +64,7 @@ protected:
 	void onZoomEvent();
 	GLdouble getZoom(int width, int height) const;
 	void resetCenter();
-
+	void CorrectOffset();
 };
 
 #endif
