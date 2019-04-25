@@ -23,7 +23,6 @@ public slots:
 	void onOpen();
 	void onExit();
 	void onAbout();
-
-	void SetZoomStatus(int prc);
+	void onZoomChanged(int prc);
 
 };

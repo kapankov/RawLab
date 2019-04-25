@@ -36,6 +36,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionZoom_400, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoom_400()));
 	connect(ui.actionZoom_800, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoom_800()));
 	connect(ui.actionCenter, SIGNAL(triggered()), ui.openGLWidget, SLOT(onCenter()));
+	connect(ui.openGLWidget, SIGNAL(zoomChanged(int)), this, SLOT(onZoomChanged(int)));
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 }
 
@@ -57,7 +58,7 @@ void RawLab::onOpen()
 
 }
 
-void RawLab::SetZoomStatus(int prc)
+void RawLab::onZoomChanged(int prc)
 {
 	m_plblScale->setText(QString(tr("Scale: %1%")).arg(QString::number(prc)));
 }

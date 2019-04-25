@@ -17,19 +17,24 @@ class RenderWidget : public QOpenGLWidget
 	// private members
 	const double m_dblZoomFactor = 2.0;
 	const double m_MaxZoomPix = 100000.0;
+	const double m_MaxZoomFactor = 20.0;
 
 	GLuint	m_tex_id;	// OpenGL texture id
-	GLdouble	m_dblZoom;	// Zoom factor, 0 - fit to window
 	RgbBuffPtr	m_pImgBuff;	// image buffer with sizes
+
+	bool m_isCenter; // флаг - изображение по центру
+	// координаты сдвига изображения
+	// обновляются при каждом зуме, ресайзе, сдвиге и скролле (уточнить все варианты)
+	// учитываются в paintGL()
+	QPointF	m_ScrollOffset;
+
+	GLdouble	m_dblZoom;	// Zoom factor, 0 - fit to window
 
 	// scroll support
 	QPoint	m_DragPoint;
-	// координаты сдвига изображения
-	// обновляются при каждом зуме, сдвиге и скролле
-	// учитываются в paintGL()
-	QPointF	m_ScrollOffset;
 	// нужен для скрола(+moving)
 	// для того, что ограничивать смещение изображения в viewport
+	// обновляется при зуме и ресайзе
 	QPointF	m_ScrollLimit;
 	// дополнительное смещение (поля) изображение при скролле
 	qreal m_ExtraOffset;
@@ -39,6 +44,10 @@ public:
 	~RenderWidget();
 
 	void SetImageJpegFile(QString filename);
+
+signals:
+	void zoomChanged(int prc);
+
 public slots:
 	void onZoomIn();
 	void onZoomOut();
@@ -64,7 +73,7 @@ protected:
 	void onZoomEvent();
 	GLdouble getZoom(int width, int height) const;
 	void resetCenter();
-	void CorrectOffset();
+	void applyScrollLimit();
 };
 
 #endif

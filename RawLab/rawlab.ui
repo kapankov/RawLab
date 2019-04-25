@@ -164,7 +164,7 @@ margin-right: 12px;
      <widget class="QTabWidget" name="tabWidget">
       <property name="minimumSize">
        <size>
-        <width>280</width>
+        <width>360</width>
         <height>0</height>
        </size>
       </property>
@@ -223,7 +223,7 @@ margin-right: 12px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>268</width>
+             <width>348</width>
              <height>479</height>
             </rect>
            </property>

@@ -7,8 +7,9 @@
 RenderWidget::RenderWidget(QWidget * parent)
 	: QOpenGLWidget(parent)
 	, m_tex_id(0)
+	, m_isCenter(true)
 	, m_dblZoom(.0)
-	, m_ExtraOffset(200.0)
+	, m_ExtraOffset(0.0)
 {
 	resetCenter();
 }
@@ -47,7 +48,7 @@ void RenderWidget::SetImageJpegFile(QString filename)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		m_dblZoom = .0;
-		resetCenter();
+		m_isCenter = true;
 		onZoomEvent();
 
 		update();
@@ -71,12 +72,12 @@ void RenderWidget::paintGL()
 	if (!m_tex_id || !m_pImgBuff)
 		return;
 
-	QRectF rctImg(-static_cast<qreal>(m_pImgBuff->m_width) + 0.5,	// left
-		static_cast<qreal>(m_pImgBuff->m_height) - 0.5,	// top
-		static_cast<qreal>(m_pImgBuff->m_width*2),	// width
-		-static_cast<qreal>(m_pImgBuff->m_height*2));	// height
+	QRectF rctImg(0,	// left
+		0,	// top
+		static_cast<qreal>(m_pImgBuff->m_width-1),	// width
+		static_cast<qreal>(m_pImgBuff->m_height-1));	// height
 
-	GLdouble dblZoom = m_dblZoom ? m_dblZoom : getZoom(width(), height());
+	GLdouble dblZoom = fabs(m_dblZoom) > DBL_EPSILON ? m_dblZoom : getZoom(width(), height());
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -88,9 +89,10 @@ void RenderWidget::paintGL()
 
 	glPushMatrix();
 
-	if (m_ScrollOffset.x() || m_ScrollOffset.y()) glTranslated(m_ScrollOffset.x(), m_ScrollOffset.y(), 0.0);
+	if (m_ScrollOffset.x() || m_ScrollOffset.y()) 
+		glTranslated(m_ScrollOffset.x(), m_ScrollOffset.y(), 0.0);
 
-	if (dblZoom != 1.0) glScaled(dblZoom, dblZoom, 1.0);
+	if (fabs(dblZoom - 1.0) > DBL_EPSILON) glScaled(dblZoom, dblZoom, 1.0);
 
 	glBegin(GL_QUADS);
 		glTexCoord2d(0, 0);	// bottom-left
@@ -115,11 +117,13 @@ void RenderWidget::resizeGL(int width, int height)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	glOrtho(-static_cast<GLdouble>(width) + 0.5,	// left
-		static_cast<GLdouble>(width) - 0.5,	// right
-		-static_cast<GLdouble>(height) + 0.5,	// bottom
-		static_cast<GLdouble>(height) - 0.5,	// top
+	glOrtho(0.0,	// left
+		static_cast<GLdouble>(width-1),	// right
+		static_cast<GLdouble>(height-1),	// bottom
+		0.0,	// top
 		1.0, -1.0);
+
+	if (m_isCenter) resetCenter();
 
 	onZoomEvent();
 }
@@ -141,24 +145,26 @@ void RenderWidget::mouseDoubleClickEvent(QMouseEvent * event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		if (m_dblZoom) onFitToWindow();
+		if (fabs(m_dblZoom) > DBL_EPSILON) onFitToWindow();
 		else onZoomToNormal();
 	}
 }
 
 void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 {
-	if (event->buttons() & Qt::LeftButton && m_pImgBuff)
+	if (event->buttons() & Qt::LeftButton && m_pImgBuff && m_dblZoom)
 	{
+		m_isCenter = false;
+		if (fabs(m_dblZoom) < DBL_EPSILON) m_dblZoom =  getZoom(width(), height());
 		QPoint ptMousePos = event->pos();
 
 		if (int iX = (ptMousePos.x() - m_DragPoint.x()))
-			m_ScrollOffset.setX(m_ScrollOffset.x() + 2 * iX);
+			m_ScrollOffset.setX(m_ScrollOffset.x() + iX);
 
 		if (int iY = (ptMousePos.y() - m_DragPoint.y()))
-			m_ScrollOffset.setY(m_ScrollOffset.y() - 2 * iY);
+			m_ScrollOffset.setY(m_ScrollOffset.y() + iY);
 
-		CorrectOffset();
+		applyScrollLimit();
 
 		m_DragPoint = ptMousePos;
 
@@ -202,25 +208,41 @@ void RenderWidget::onZoomEvent()
 {
 	if (m_pImgBuff)
 	{
+		if (m_isCenter) resetCenter();
+
 		// определим новое ограничение для скролла
 		GLdouble zoom = getZoom(width(), height());
 		qreal w = zoom * m_pImgBuff->m_width;
 		qreal h = zoom * m_pImgBuff->m_height;
-		m_ScrollLimit.setX(w > width() ? w - width() + m_ExtraOffset : 0.0);
-		m_ScrollLimit.setY(h > height() ? h - height() + m_ExtraOffset : 0.0);
-		CorrectOffset();
+		// отрицательное смещение разрешает смещаться влево или вверх
+		// положительное или нулевое запрещает смещение
+		m_ScrollLimit.setX(
+			(w > width() ? 
+				static_cast<qreal>(width()) - w + zoom : 
+				0.5*(static_cast<qreal>(width()) - w - zoom)
+			) + m_ExtraOffset
+		);
+		m_ScrollLimit.setY(
+			(h > height() ? 
+				static_cast<qreal>(height()) - h + zoom : 
+				0.5*(static_cast<qreal>(height()) - h - zoom)
+			) + m_ExtraOffset
+		);
+		applyScrollLimit();
 	}
-	static_cast<RawLab*>(QWidget::window())->SetZoomStatus(getZoom(width(), height()) * 100);
+	emit zoomChanged(getZoom(width(), height()) * 100);	// signal
+	//static_cast<RawLab*>(QWidget::window())->SetZoomStatus(getZoom(width(), height()) * 100);
 }
 
 GLdouble RenderWidget::getZoom(int width, int height) const
 {
 	if (m_pImgBuff)
 	{
-		if (!m_dblZoom)
+		if (fabs(m_dblZoom) < DBL_EPSILON) // m_dblZoom == 0
 		{
-			GLdouble zoom = std::max(static_cast<GLdouble>(m_pImgBuff->m_width) / width, static_cast<GLdouble>(m_pImgBuff->m_height) / height);
-			return 1.0f / (zoom ? zoom : 1.0f);
+			GLdouble zoom = std::max(static_cast<GLdouble>(m_pImgBuff->m_width) / width, 
+				static_cast<GLdouble>(m_pImgBuff->m_height) / height);
+			return 1.0f / (fabs(zoom) > DBL_EPSILON ? zoom : 1.0f);
 		}
 		else return m_dblZoom;
 	}
@@ -229,26 +251,36 @@ GLdouble RenderWidget::getZoom(int width, int height) const
 
 void RenderWidget::resetCenter()
 {
-	m_ScrollOffset.setX(0);
-	m_ScrollOffset.setY(0);
+	if (!m_isCenter) m_isCenter = true;
+	GLdouble dblZoom = fabs(m_dblZoom) > DBL_EPSILON ? m_dblZoom : getZoom(width(), height());
+	m_ScrollOffset.setX(
+		m_pImgBuff ? static_cast<double>(width() - m_pImgBuff->m_width*dblZoom) / 2 : 0.0
+	);
+	m_ScrollOffset.setY(
+		m_pImgBuff ? static_cast<double>(height() - m_pImgBuff->m_height*dblZoom) / 2 : 0.0
+	);
 }
 
-void RenderWidget::CorrectOffset()
+void RenderWidget::applyScrollLimit()
 {
 	// m_ScrollLimit checking
-	if (m_ScrollOffset.x() > m_ScrollLimit.x()) m_ScrollOffset.setX(m_ScrollLimit.x());
-	if (m_ScrollOffset.x() < -m_ScrollLimit.x()) m_ScrollOffset.setX(-m_ScrollLimit.x());
-	if (m_ScrollOffset.y() > m_ScrollLimit.y()) m_ScrollOffset.setY(m_ScrollLimit.y());
-	if (m_ScrollOffset.y() < -m_ScrollLimit.y()) m_ScrollOffset.setY(-m_ScrollLimit.y());
+	if (m_ScrollLimit.x() >= 0) m_ScrollOffset.setX(m_ScrollLimit.x());
+	else if (m_ScrollOffset.x() > 0.0) m_ScrollOffset.setX(0.0);
+	else if (m_ScrollOffset.x() < m_ScrollLimit.x()) m_ScrollOffset.setX(m_ScrollLimit.x());
+	if (m_ScrollLimit.y() >= 0) m_ScrollOffset.setY(m_ScrollLimit.y());
+	else if (m_ScrollOffset.y() > 0.0) m_ScrollOffset.setY(0.0);
+	else if (m_ScrollOffset.y() < m_ScrollLimit.y()) m_ScrollOffset.setY(m_ScrollLimit.y());
 }
 
 void RenderWidget::onZoomIn()
 {
 	if (!m_pImgBuff) return;
-	if (!m_dblZoom)
+	if (fabs(m_dblZoom) < DBL_EPSILON) // m_dblZoom == 0
 		m_dblZoom = getZoom(width(), height());
 
-	if ((static_cast<int>(m_dblZoom * m_pImgBuff->m_width) < m_MaxZoomPix && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) < m_MaxZoomPix) && m_dblZoom < 20)
+	if ((static_cast<int>(m_dblZoom * m_pImgBuff->m_width) < m_MaxZoomPix 
+		&& static_cast<int>(m_dblZoom * m_pImgBuff->m_height) < m_MaxZoomPix) 
+		&& m_dblZoom < m_MaxZoomFactor)
 	{
 		m_dblZoom *= m_dblZoomFactor;
 		onZoomEvent();
@@ -259,9 +291,10 @@ void RenderWidget::onZoomIn()
 void RenderWidget::onZoomOut()
 {
 	if (!m_pImgBuff) return;
-	if (!m_dblZoom)
+	if (fabs(m_dblZoom) < DBL_EPSILON) // m_dblZoom == 0
 		m_dblZoom = getZoom(width(), height());
-	if (static_cast<int>(m_dblZoom * m_pImgBuff->m_width) > 100 && static_cast<int>(m_dblZoom * m_pImgBuff->m_height) > 100)
+	if (static_cast<int>(m_dblZoom * m_pImgBuff->m_width) > 100 
+		&& static_cast<int>(m_dblZoom * m_pImgBuff->m_height) > 100)
 	{
 		m_dblZoom /= m_dblZoomFactor;
 		onZoomEvent();
@@ -273,7 +306,7 @@ void RenderWidget::onFitToWindow()
 {
 	if (!m_pImgBuff) return;
 	m_dblZoom = .0f;
-	resetCenter();
+	m_isCenter = true;
 	onZoomEvent();
 	update();
 }
@@ -322,7 +355,7 @@ void RenderWidget::onZoomToNormal()
 {
 	if (!m_pImgBuff) return;
 	m_dblZoom = 1.0f;
-	resetCenter();
+	m_isCenter = true;
 	onZoomEvent();
 	update();
 }
