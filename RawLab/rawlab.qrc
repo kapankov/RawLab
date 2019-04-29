@@ -1,5 +1,13 @@
 <RCC>
   <qresource prefix="images">
+    <file>Resources/down_arrow.png</file>
+    <file>Resources/down_arrow_disabled.png</file>
+    <file>Resources/left_arrow.png</file>
+    <file>Resources/left_arrow_disabled.png</file>
+    <file>Resources/right_arrow.png</file>
+    <file>Resources/right_arrow_disabled.png</file>
+    <file>Resources/up_arrow.png</file>
+    <file>Resources/up_arrow_disabled.png</file>
     <file>Resources/zoomin.png</file>
     <file>Resources/center.png</file>
     <file>Resources/fittownd.png</file>

@@ -74,8 +74,8 @@ void RenderWidget::paintGL()
 
 	QRectF rctImg(0,	// left
 		0,	// top
-		static_cast<qreal>(m_pImgBuff->m_width-1),	// width
-		static_cast<qreal>(m_pImgBuff->m_height-1));	// height
+		static_cast<qreal>(m_pImgBuff->m_width),	// width
+		static_cast<qreal>(m_pImgBuff->m_height));	// height
 
 	GLdouble dblZoom = fabs(m_dblZoom) > DBL_EPSILON ? m_dblZoom : getZoom(width(), height());
 
@@ -118,8 +118,8 @@ void RenderWidget::resizeGL(int width, int height)
 	glLoadIdentity();
 
 	glOrtho(0.0,	// left
-		static_cast<GLdouble>(width-1),	// right
-		static_cast<GLdouble>(height-1),	// bottom
+		static_cast<GLdouble>(width),	// right
+		static_cast<GLdouble>(height),	// bottom
 		0.0,	// top
 		1.0, -1.0);
 
@@ -167,6 +167,8 @@ void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 		applyScrollLimit();
 
 		m_DragPoint = ptMousePos;
+
+		emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
 
 		update();
 	}
@@ -217,18 +219,21 @@ void RenderWidget::onZoomEvent()
 		// отрицательное смещение разрешает смещаться влево или вверх
 		// положительное или нулевое запрещает смещение
 		m_ScrollLimit.setX(
-			(w > width() ? 
-				static_cast<qreal>(width()) - w + zoom : 
-				0.5*(static_cast<qreal>(width()) - w - zoom)
+			((w - width()) > DBL_EPSILON ? 
+				static_cast<qreal>(width()) - w : 
+				0.5*(static_cast<qreal>(width()) - w)
 			) + m_ExtraOffset
 		);
 		m_ScrollLimit.setY(
-			(h > height() ? 
-				static_cast<qreal>(height()) - h + zoom : 
-				0.5*(static_cast<qreal>(height()) - h - zoom)
+			((h - height()) > DBL_EPSILON ? 
+				static_cast<qreal>(height()) - h : 
+				0.5*(static_cast<qreal>(height()) - h)
 			) + m_ExtraOffset
 		);
 		applyScrollLimit();
+
+		emit scrollSizeChanged(static_cast<int>(w), static_cast<int>(h));
+		emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
 	}
 	emit zoomChanged(getZoom(width(), height()) * 100);	// signal
 	//static_cast<RawLab*>(QWidget::window())->SetZoomStatus(getZoom(width(), height()) * 100);
@@ -270,6 +275,13 @@ void RenderWidget::applyScrollLimit()
 	if (m_ScrollLimit.y() >= 0) m_ScrollOffset.setY(m_ScrollLimit.y());
 	else if (m_ScrollOffset.y() > 0.0) m_ScrollOffset.setY(0.0);
 	else if (m_ScrollOffset.y() < m_ScrollLimit.y()) m_ScrollOffset.setY(m_ScrollLimit.y());
+}
+
+void RenderWidget::setOffset(int x, int y)
+{
+	if (x <= 0) m_ScrollOffset.setX(x);
+	if (y <= 0) m_ScrollOffset.setY(y);
+	update();
 }
 
 void RenderWidget::onZoomIn()
@@ -364,5 +376,6 @@ void RenderWidget::onCenter()
 {
 	if (!m_pImgBuff) return;
 	resetCenter();
+	emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
 	update();
 }

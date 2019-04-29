@@ -114,11 +114,161 @@ padding: 0px;
 QGraphicView{
 background-color: #606060;
 }
+QColumnView{
+background-color: #606060;
+}
+
+/* QAbstractScrollArea ---------------------------------------------------- */
+
+QAbstractScrollArea {
+    background-color: #808080;
+    border: 1px solid #606060;
+    border-radius: 4px;
+    padding: 4px;
+    color: #F0F0F0;
+}
+
+QAbstractScrollArea:disabled {
+    color: #787878;
+}
+
+/* QScrollArea ------------------------------------------------------------ */
+
 QScrollArea QWidget{
 background-color: #606060;
 }
-QColumnView{
-background-color: #606060;
+
+QScrollArea QWidget QWidget:disabled {
+background-color: #808080;
+}
+
+/* QScrollBar ------------------------------------------------------------- */
+QScrollBar:horizontal {
+background-color: #909090;
+height: 16px;
+margin: 1px 16px 1px 16px;
+border: 1px solid #707070;
+border-radius: 2px;
+}
+/* scrollBar slider */
+QScrollBar::handle:horizontal {
+background-color: #C0C0C0;
+border: 1px solid #808080;
+min-width: 8px;
+border-radius: 2px;
+}
+QScrollBar::handle:horizontal:hover {
+background-color: #E0E0E0;
+border: 1px solid #808080;
+min-width: 8px;
+border-radius: 2px;
+}
+/* page-down */
+QScrollBar::add-line:horizontal {
+margin: 0px 2px 0px 2px;
+border-image: url(:/images/Resources/right_arrow_disabled.png);
+width: 10px;
+height: 10px;
+subcontrol-position: right;
+subcontrol-origin: margin;
+}
+QScrollBar::add-line:horizontal:hover,
+QScrollBar::add-line:horizontal:on {
+border-image: url(:/images/Resources/right_arrow.png);
+height: 10px;
+width: 10px;
+subcontrol-position: right;
+subcontrol-origin: margin;
+}
+/* page-up */
+QScrollBar::sub-line:horizontal {
+margin: 0px 2px 0px 2px;
+border-image: url(:/images/Resources/left_arrow_disabled.png);
+height: 10px;
+width: 10px;
+subcontrol-position: left;
+subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal:hover,
+QScrollBar::sub-line:horizontal:on {
+border-image: url(:/images/Resources/left_arrow.png);
+height: 10px;
+width: 10px;
+subcontrol-position: left;
+subcontrol-origin: margin;
+}
+/* left-right-arrow */
+QScrollBar::up-arrow:horizontal,
+QScrollBar::down-arrow:horizontal {
+background: none;
+}
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+background: none;
+}
+
+QScrollBar:vertical {
+background-color: #909090;
+width: 16px;
+margin: 16px 1px 16px 1px;
+border: 1px solid #707070;
+border-radius: 2px;
+}
+/* scrollBar slider */
+QScrollBar::handle:vertical {
+background-color: #C0C0C0;
+border: 1px solid #808080;
+min-height: 8px;
+border-radius: 2px;
+}
+QScrollBar::handle:vertical:hover {
+background-color: #E0E0E0;
+border: 1px solid #808080;
+min-height: 8px;
+border-radius: 2px;
+}
+/* page-down */
+QScrollBar::add-line:vertical {
+margin: 2px 0px 2px 0px;
+border-image: url(:/images/Resources/down_arrow_disabled.png);
+height: 10px;
+width: 10px;
+subcontrol-position: bottom;
+subcontrol-origin: margin;
+}
+QScrollBar::add-line:vertical:hover,
+QScrollBar::add-line:vertical:on {
+border-image: url(:/images/Resources/down_arrow.png);
+height: 10px;
+width: 10px;
+subcontrol-position: bottom;
+subcontrol-origin: margin;
+}
+/* page-up */
+QScrollBar::sub-line:vertical {
+margin: 2px 0px 2px 0px;
+border-image: url(:/images/Resources/up_arrow_disabled.png);
+height: 10px;
+width: 10px;
+subcontrol-position: top;
+subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical:hover,
+QScrollBar::sub-line:vertical:on {
+border-image: url(:/images/Resources/up_arrow.png);
+height: 10px;
+width: 10px;
+subcontrol-position: top;
+subcontrol-origin: margin;
+}
+/* up-down-arrow */
+QScrollBar::up-arrow:vertical,
+QScrollBar::down-arrow:vertical {
+background: none;
+}
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+background: none;
 }
 
 QMessageBox {
@@ -223,8 +373,8 @@ margin-right: 12px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>348</width>
-             <height>479</height>
+             <width>340</width>
+             <height>471</height>
             </rect>
            </property>
           </widget>
@@ -257,7 +407,28 @@ margin-right: 12px;
      </widget>
     </item>
     <item>
-     <widget class="RenderWidget" name="openGLWidget"/>
+     <widget class="ImageScrollWidget" name="imageScrollWidget" native="true">
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="RenderWidget" name="openGLWidget"/>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -472,6 +643,12 @@ margin-right: 12px;
    <class>HistogramWidget</class>
    <extends>QWidget</extends>
    <header>histogram_widget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ImageScrollWidget</class>
+   <extends>QWidget</extends>
+   <header>image_scroll_widget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -14,6 +14,8 @@ class RenderWidget : public QOpenGLWidget
 {
 	Q_OBJECT
 
+	friend class ImageScrollWidget;
+
 	// private members
 	const double m_dblZoomFactor = 2.0;
 	const double m_MaxZoomPix = 100000.0;
@@ -47,6 +49,8 @@ public:
 
 signals:
 	void zoomChanged(int prc);
+	void scrollOffsetChanged(int xOffset, int yOffset);
+	void scrollSizeChanged(int x, int y);
 
 public slots:
 	void onZoomIn();
@@ -74,6 +78,8 @@ protected:
 	GLdouble getZoom(int width, int height) const;
 	void resetCenter();
 	void applyScrollLimit();
+	// for parent scroll
+	void setOffset(int x, int y);
 };
 
 #endif

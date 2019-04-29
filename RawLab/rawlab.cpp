@@ -24,6 +24,8 @@ RawLab::RawLab(QWidget *parent)
 	m_plblProgress->setText(tr("Not running"));
 	m_plblInfo->setText(tr("Some information"));
 
+	ui.imageScrollWidget->setViewport(ui.openGLWidget);
+
 	connect(ui.action_Exit, SIGNAL(triggered()), this, SLOT(onExit()));
 	connect(ui.action_Open, SIGNAL(triggered()), this, SLOT(onOpen()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
@@ -37,6 +39,8 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionZoom_800, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoom_800()));
 	connect(ui.actionCenter, SIGNAL(triggered()), ui.openGLWidget, SLOT(onCenter()));
 	connect(ui.openGLWidget, SIGNAL(zoomChanged(int)), this, SLOT(onZoomChanged(int)));
+	connect(ui.openGLWidget, SIGNAL(scrollSizeChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollSizeChanged(int, int)));
+	connect(ui.openGLWidget, SIGNAL(scrollOffsetChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollOffsetChanged(int, int)));
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 }
 

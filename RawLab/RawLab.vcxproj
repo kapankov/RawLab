@@ -110,6 +110,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="histogram_widget.cpp" />
+    <ClCompile Include="image_scroll_widget.cpp" />
     <ClCompile Include="jpeg.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="rawlab.cpp" />
@@ -121,6 +122,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_rawlab.h" />
+    <QtMoc Include="image_scroll_widget.h">
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h;image_scroll_widget.h;%(ForceInclude)</ForceInclude>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdafx.h;image_scroll_widget.h;%(ForceInclude)</ForceInclude>
+    </QtMoc>
     <ClInclude Include="version.h" />
     <QtMoc Include="rawlab.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
