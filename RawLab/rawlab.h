@@ -12,9 +12,10 @@ public:
 	RawLab(QWidget *parent = Q_NULLPTR);
 	~RawLab();
 
+	void openFile(const QString& filename);
 private:
 	Ui::RawLabClass ui;
-
+	CSettings m_settings;
 	QLabel* m_plblState;
 	QLabel* m_plblProgress;
 	QLabel* m_plblScale;

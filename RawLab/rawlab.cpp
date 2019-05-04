@@ -9,11 +9,15 @@ RawLab::RawLab(QWidget *parent)
 {
 	ui.setupUi(this);
 
+	m_settings.setDefaultValue(QString("opendir").toStdWString(), QFileInfo(QCoreApplication::applicationFilePath()).path().toStdWString());
+	m_settings.setDefaultValue(QString("minfilter").toStdWString(), QString("LINEAR").toStdWString());
+	m_settings.setDefaultValue(QString("magfilter").toStdWString(), QString("NEAREST").toStdWString());
+	m_settings.setPath(QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
+
 	m_plblState = new QLabel(this);
 	m_plblProgress = new QLabel(this);
 	m_plblScale = new QLabel(this);
 	m_plblInfo = new QLabel(this);
-
 
 	statusBar()->addPermanentWidget(m_plblState, 5);
 	statusBar()->addPermanentWidget(m_plblProgress, 3);
@@ -52,14 +56,21 @@ RawLab::~RawLab()
 	delete m_plblInfo;
 }
 
+void RawLab::openFile(const QString& filename)
+{
+	if (filename.isNull()) return;
+	QFileInfo check_file(filename);
+	if (check_file.exists() && check_file.isFile())
+	{
+		m_plblState->setText(filename);
+		ui.openGLWidget->SetImageJpegFile(filename);
+	}
+}
+
 void RawLab::onOpen()
 {
-	auto fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), "", tr("Jpeg Files (*.jpeg *.jpg);;Raw Files(*.cr2 *.nef *.dng)")); // .toStdString();
-	m_plblState->setText(fileName);
-
-	// update RenderWidget
-	ui.openGLWidget->SetImageJpegFile(fileName);
-
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), "", tr("Jpeg Files (*.jpeg *.jpg);;Raw Files(*.cr2 *.nef *.dng)")); // .toStdString();
+	openFile(fileName);
 }
 
 void RawLab::onZoomChanged(int prc)

@@ -11,5 +11,9 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 	RawLab w;
 	w.show();
+	if (argc > 0)
+	{
+		w.openFile(QString(argv[1]));
+	}
 	return a.exec();
 }

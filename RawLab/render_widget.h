@@ -80,6 +80,7 @@ protected:
 	void applyScrollLimit();
 	// for parent scroll
 	void setOffset(int x, int y);
+	QPointF getCurrentCenter();
 };
 
 #endif

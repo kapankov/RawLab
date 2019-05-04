@@ -77,7 +77,7 @@ void RenderWidget::paintGL()
 		static_cast<qreal>(m_pImgBuff->m_width),	// width
 		static_cast<qreal>(m_pImgBuff->m_height));	// height
 
-	GLdouble dblZoom = fabs(m_dblZoom) > DBL_EPSILON ? m_dblZoom : getZoom(width(), height());
+	GLdouble dblZoom = getZoom(width(), height());
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -257,12 +257,12 @@ GLdouble RenderWidget::getZoom(int width, int height) const
 void RenderWidget::resetCenter()
 {
 	if (!m_isCenter) m_isCenter = true;
-	GLdouble dblZoom = fabs(m_dblZoom) > DBL_EPSILON ? m_dblZoom : getZoom(width(), height());
+	GLdouble dblZoom = getZoom(width(), height());
 	m_ScrollOffset.setX(
-		m_pImgBuff ? static_cast<double>(width() - m_pImgBuff->m_width*dblZoom) / 2 : 0.0
+		m_pImgBuff ? 0.5 * (static_cast<double>(width()) - dblZoom*m_pImgBuff->m_width) : 0.0
 	);
 	m_ScrollOffset.setY(
-		m_pImgBuff ? static_cast<double>(height() - m_pImgBuff->m_height*dblZoom) / 2 : 0.0
+		m_pImgBuff ? 0.5 * (static_cast<double>(height()) - dblZoom*m_pImgBuff->m_height) : 0.0
 	);
 }
 
@@ -284,9 +284,32 @@ void RenderWidget::setOffset(int x, int y)
 	update();
 }
 
+QPointF RenderWidget::getCurrentCenter()
+{
+	if (!m_pImgBuff) return QPointF();
+
+	QPointF r(0.5 * m_pImgBuff->m_width, 0.5 * m_pImgBuff->m_height);
+	GLdouble zoom = getZoom(width(), height());
+	qreal w = zoom * m_pImgBuff->m_width;
+	qreal h = zoom * m_pImgBuff->m_height;
+
+	qreal _w = width();
+	qreal _h = height();
+
+	if (w > width())
+		r.setX((0.5 * width() - m_ScrollOffset.x()) / zoom);
+	if (h > height())
+		r.setY((0.5 * height() - m_ScrollOffset.y()) / zoom);
+
+	return r;
+}
+
 void RenderWidget::onZoomIn()
 {
 	if (!m_pImgBuff) return;
+
+	QPointF p = getCurrentCenter();
+
 	if (fabs(m_dblZoom) < DBL_EPSILON) // m_dblZoom == 0
 		m_dblZoom = getZoom(width(), height());
 
@@ -303,6 +326,9 @@ void RenderWidget::onZoomIn()
 void RenderWidget::onZoomOut()
 {
 	if (!m_pImgBuff) return;
+
+	QPointF p = getCurrentCenter();
+
 	if (fabs(m_dblZoom) < DBL_EPSILON) // m_dblZoom == 0
 		m_dblZoom = getZoom(width(), height());
 	if (static_cast<int>(m_dblZoom * m_pImgBuff->m_width) > 100 
