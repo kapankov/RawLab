@@ -62,14 +62,53 @@ void RawLab::openFile(const QString& filename)
 	QFileInfo check_file(filename);
 	if (check_file.exists() && check_file.isFile())
 	{
-		m_plblState->setText(filename);
-		ui.openGLWidget->SetImageJpegFile(filename);
+		if (check_file.suffix().compare("jpg", Qt::CaseInsensitive) == 0 || check_file.suffix().compare("jpeg", Qt::CaseInsensitive) == 0)
+		{
+			if (!ui.openGLWidget->SetImageJpegFile(filename))
+				QMessageBox::critical(this, tr("RawLab error"), QString(tr("Unable to open jpeg file:\n")) + filename);
+			else
+				m_plblState->setText(filename);
+		}
+		else
+		{
+			if (!ui.openGLWidget->SetImageRawFile(filename))
+				QMessageBox::critical(this, tr("RawLab error"), QString(tr("Unable to open RAW file:\n")) + filename);
+			else
+				m_plblState->setText(filename);
+		}
 	}
 }
 
 void RawLab::onOpen()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), "", tr("Jpeg Files (*.jpeg *.jpg);;Raw Files(*.cr2 *.nef *.dng)")); // .toStdString();
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), "", 
+		tr(	"Adobe Digital Negative files (*.dng);;"
+			"Canon RAW 2 files (*.cr2);;"
+			"Nikon RAW files (*.nef);;"
+			"FujiFilm RAW files (*.raf);;"
+			"Hasselblad RAW files (*.3fr);;"
+			"Sony Alpha RAW files (*.arw);;"
+			"Canon RAW files (*.ciff);;"
+			"Canon RAW files (*.crw);;"
+			"Kodak RAW files (*.dcr);;"
+			"Epson RAW files (*.erf);;"
+			"Phase One RAW files (*.iiq);;"
+			"Kodak DC25 RAW files (*.k25);;"
+			"Kodak RAW files (*.kdc);;"
+			"Mamiya RAW files (*.mef);;"
+			"Minolta RAW files (*.mrw);;"
+			"Nikon RAW 2 files (*.nrw);;"
+			"Olympus RAW files (*.orf);;"
+			"Pentax RAW files (*.pef);;"
+			"Panasonic RAW files (*.raw);;"
+			"Panasonic RAW 2 files (*.rw2);;"
+			"Leica RAW files (*.rwl);;"
+			"Sony RAW 2 files (*.sr2);;"
+			"Sony RAW files (*.srf);;"
+			"Samsung RAW files (*.srw);;"
+			"Sigma/Foveon RAW files (*.x3f);;"
+			"Jpeg Files (*.jpeg *.jpg);;"
+			"All Files (*.*)")); // .toStdString();
 	openFile(fileName);
 }
 
@@ -90,6 +129,39 @@ void RawLab::onAbout()
 		"Copyright(C) " LEGALCOPYRIGHT "\n"
 		PRODUCTSUPPORT "\n"
 		"\n"
-		"IJG JPEG LIBRARY (libjpeg) ver. 8d\n"
-		"Copyright(C) 1991 - 2012, Thomas G.Lane, Guido Vollbeding\n").arg(QString::number(MAJOR_VER), QString::number(MINOR_VER), QString::number(RELEASE_VER), QString::number(BUILD_VER)));
+		"Qt ver. %5\n"
+		"Copyright (C) 2016 The Qt Company Ltd.\n"
+		"\n"
+		"IJG JPEG LIBRARY (libjpeg) ver. %6.%7\n"
+		"Copyright(C) 1991 - 2012, Thomas G.Lane, Guido Vollbeding\n"
+		"\n").
+		arg(QString::number(MAJOR_VER), QString::number(MINOR_VER), QString::number(RELEASE_VER), QString::number(BUILD_VER), 
+			QT_VERSION_STR,
+			QString::number(JPEG_LIB_VERSION_MAJOR), QString::number(JPEG_LIB_VERSION_MINOR)
+		) +
+		QString("GNU LIBICONV ver. %1.%2\n"
+		"Copyright (C) 1999-2019 Free Software Foundation, Inc.\n"
+		"\n"
+		"LIBXML ver. %3\n"
+		"Copyright (C) 1998-2012 Daniel Veillard.  All Rights Reserved.\n"
+		"\n"
+		"Little CMS ver. %4\n"
+		"Copyright (c) 1998-2011 Marti Maria Saguer\n"
+		"\n"
+		"PTHREADS-WIN32 ver. %5\n"
+		"Copyright(C) 1998 John E. Bossom\n"
+		"Copyright(C) 1999,2005 Pthreads-win32 contributors\n"
+		"\n"
+		"RawSpeed\n"
+		"Copyright (C) 2009 Klaus Post\n"
+		"\n"
+		"LibRaw ver. %6\n"
+		"Copyright 2008-2019 LibRaw LLC (info@libraw.org)").
+		arg(QString::number((_LIBICONV_VERSION >> 8) & 0xFF), QString::number(_LIBICONV_VERSION & 0xFF),
+			LIBXML_DOTTED_VERSION,
+			QString::number(LCMS_VERSION / 1000.0),
+			QString(PTW32_VERSION_STRING).replace(", ", "."),
+			LIBRAW_VERSION_STR
+		)
+	);
 }

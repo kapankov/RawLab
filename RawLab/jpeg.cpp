@@ -2,7 +2,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include "stdafx.h"
-#include <jpeglib.h>
 
 //Decompress the JPEG Image
 RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL fAdobeToSrgb*/)

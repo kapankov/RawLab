@@ -45,7 +45,8 @@ public:
 	RenderWidget(QWidget *parent = 0);
 	~RenderWidget();
 
-	void SetImageJpegFile(QString filename);
+	bool SetImageJpegFile(QString filename);
+	bool SetImageRawFile(QString filename);
 
 signals:
 	void zoomChanged(int prc);

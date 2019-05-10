@@ -18,8 +18,9 @@ RenderWidget::~RenderWidget()
 {
 }
 
-void RenderWidget::SetImageJpegFile(QString filename)
+bool RenderWidget::SetImageJpegFile(QString filename)
 {
+	bool result = false;
 	QFile file(filename);
 	file.open(QFile::ReadOnly);
 	if (uchar *memdata = file.map(0, file.size()))
@@ -54,7 +55,15 @@ void RenderWidget::SetImageJpegFile(QString filename)
 		update();
 
 		setMouseTracking(true);
+
+		result = true;
 	}
+	return result;
+}
+
+bool RenderWidget::SetImageRawFile(QString filename)
+{
+	return false;
 }
 
 void RenderWidget::initializeGL()
