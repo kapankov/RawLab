@@ -65,17 +65,20 @@ void RawLab::openFile(const QString& filename)
 		if (check_file.suffix().compare("jpg", Qt::CaseInsensitive) == 0 || check_file.suffix().compare("jpeg", Qt::CaseInsensitive) == 0)
 		{
 			if (!ui.openGLWidget->SetImageJpegFile(filename))
+			{
 				QMessageBox::critical(this, tr("RawLab error"), QString(tr("Unable to open jpeg file:\n")) + filename);
-			else
-				m_plblState->setText(filename);
+				return;
+			}
 		}
 		else
 		{
 			if (!ui.openGLWidget->SetImageRawFile(filename))
+			{
 				QMessageBox::critical(this, tr("RawLab error"), QString(tr("Unable to open RAW file:\n")) + filename);
-			else
-				m_plblState->setText(filename);
+				return;
+			}
 		}
+		m_plblState->setText(filename);
 	}
 }
 

@@ -186,17 +186,18 @@ void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 void RenderWidget::wheelEvent(QWheelEvent * event)
 {
 	Qt::KeyboardModifiers x = event->modifiers();
+
+	QPoint numPixels = event->pixelDelta();
+	QPoint numDegrees = event->angleDelta() / 8;
+
+	int iSteps = 0;
+	if (!numPixels.isNull())
+		iSteps = numPixels.x() ? numPixels.x() : numPixels.y();
+	else if (!numDegrees.isNull())
+		iSteps = (numDegrees.x() ? numDegrees.x() : numDegrees.y()) / 15;
+
 	if (x & Qt::AltModifier)
 	{
-		QPoint numPixels = event->pixelDelta();
-		QPoint numDegrees = event->angleDelta() / 8;
-
-		int iSteps = 0;
-		if (!numPixels.isNull())
-			iSteps = numPixels.x()? numPixels.x(): numPixels.y();
-		else if (!numDegrees.isNull())
-			iSteps = (numDegrees.x()? numDegrees.x(): numDegrees.y()) / 15;
-
 		if (iSteps > 0)
 			while (iSteps)
 			{
@@ -212,6 +213,46 @@ void RenderWidget::wheelEvent(QWheelEvent * event)
 			}
 
 		event->accept();
+	}
+	else if (x & Qt::ControlModifier)
+	{
+		if (iSteps > 0)
+			while (iSteps)
+			{
+				if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() + iSteps);
+				iSteps--;
+			}
+
+		if (iSteps < 0)
+			while (iSteps)
+			{
+				if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() + iSteps);
+				iSteps++;
+			}
+
+		applyScrollLimit();
+		event->accept();
+		update();
+	}
+	else
+	{
+		if (iSteps > 0)
+			while (iSteps)
+			{
+				if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() + iSteps);
+				iSteps--;
+			}
+
+		if (iSteps < 0)
+			while (iSteps)
+			{
+				if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() + iSteps);
+				iSteps++;
+			}
+
+		applyScrollLimit();
+		event->accept();
+		update();
 	}
 }
 

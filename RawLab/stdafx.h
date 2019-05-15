@@ -1,5 +1,8 @@
 #pragma once
 
+#define _USE_MATH_DEFINES
+#include <math.h>	// to prevent Qt macro redefinitions
+
 #include <string>
 #include <codecvt>
 #include <map>
@@ -12,9 +15,13 @@
 #include <jpeglib.h>
 #include <lcms2.h>
 #include <pthread.h>
-#include <libraw.h>
+#pragma warning(push)
+#pragma warning(disable: 4251)
+#include "libraw/libraw.h"
+#pragma warning(pop)
 
 #include "jpeg.h"
 #include "settings.h"
+#include "librawex.h"
 #include "rawlab.h"
 

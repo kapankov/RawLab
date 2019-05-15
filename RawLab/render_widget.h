@@ -1,3 +1,31 @@
+/*!
+	\file render_widget.h
+	\brief Header file with RenderWidget class (inherited from QOpenGLWidget class)
+	\details The RenderWidget class allows you to display a loaded image using OpenGL.
+	Features:
+		1. Zoom - zoom in / out
+		Zoom In
+			Shortcut - Ctrl + +
+			Rotate the mouse wheel forward with the Alt key held down
+		Zoom Out
+			Shortcut - Ctrl + -
+			Rotate the mouse wheel back with the Alt key held down
+		100% zoom
+			Shortcut - Ctrl + 1
+			Or double click on the image in window fit mode
+		Zoom fit to window
+			Shortcut - Ctrl + 0
+			Or double click on the image when not in window fit mode
+
+	\authors Konstantin A. Pankov, explorus@mail.ru
+	\copyright Copyright 2017-2019 Konstantin A. Pankov. All rights reserved.
+	\license This project is released under the LGPL v.3
+	\version 0.1
+	\date 02/04/2019
+	\warning In developing. Not a stable tested code.
+	...
+
+*/
 #ifndef RENDER_WIDGET_H
 #define RENDER_WIDGET_H
 

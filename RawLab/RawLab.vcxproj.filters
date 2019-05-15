@@ -28,6 +28,9 @@
       <Extensions>moc;h;cpp</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="LibRaw-demosaic-pack">
+      <UniqueIdentifier>{67e6bd09-983f-448a-a8f1-8f1c755d6dea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -57,6 +60,48 @@
     <ClCompile Include="settings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="librawex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\afd_interpolate_pl.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\ahd_interpolate_mod.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\ahd_partial_interpolate.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\cfa_impulse_gauss.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\cfa_linedn_new.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\es_median_filter.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\lmmse_interpolate.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\median_filter_new.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\refinement.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\shrtdct_float.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\vcd_interpolate.c">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\amaze_demosaic_RT.cc">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
+    <ClCompile Include="LibRaw-demosaic-pack\CA_correct_RT.cc">
+      <Filter>LibRaw-demosaic-pack</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -72,6 +117,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="librawex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
