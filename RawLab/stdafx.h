@@ -20,7 +20,10 @@
 #include "libraw/libraw.h"
 #pragma warning(pop)
 
+#include "common_types.h"
+#include "color_math.h"
 #include "jpeg.h"
+#include "bitmap.h"
 #include "settings.h"
 #include "librawex.h"
 #include "rawlab.h"

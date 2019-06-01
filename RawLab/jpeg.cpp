@@ -16,7 +16,7 @@ RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL
 	jpeg_calc_output_dimensions(&cinfo);
 	jpeg_start_decompress(&cinfo);
 	JDIMENSION ulDwAlgnRowSize = cinfo.output_width * 3;
-	ulDwAlgnRowSize += ulDwAlgnRowSize % 4 ? (4 - ulDwAlgnRowSize % 4) : 0;
+	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += 4 - (ulDwAlgnRowSize & 3);
 
 	auto ptr = std::unique_ptr<RgbBuff>(new RgbBuff());
 	ptr->m_buff = new unsigned char[ulDwAlgnRowSize * cinfo.output_height];

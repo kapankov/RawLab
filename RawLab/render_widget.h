@@ -16,6 +16,7 @@
 		Zoom fit to window
 			Shortcut - Ctrl + 0
 			Or double click on the image when not in window fit mode
+		2. Move (scroll)
 
 	\authors Konstantin A. Pankov, explorus@mail.ru
 	\copyright Copyright 2017-2019 Konstantin A. Pankov. All rights reserved.
@@ -79,6 +80,7 @@ public:
 signals:
 	void zoomChanged(int prc);
 	void scrollOffsetChanged(int xOffset, int yOffset);
+	/* новый размер изображения с учетом зума */
 	void scrollSizeChanged(int x, int y);
 
 public slots:
@@ -92,7 +94,13 @@ public slots:
 	void onZoom_400();
 	void onZoom_800();
 	void onCenter();
+	void onMoveLeft();
+	void onMoveRight();
+	void onMoveUp();
+	void onMoveDown();
 protected:
+
+	bool UpdateImage();
 	void initializeGL() override;
 	void paintGL() override;
 	void resizeGL(int width, int height) override;

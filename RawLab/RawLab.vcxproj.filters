@@ -102,6 +102,15 @@
     <ClCompile Include="LibRaw-demosaic-pack\CA_correct_RT.cc">
       <Filter>LibRaw-demosaic-pack</Filter>
     </ClCompile>
+    <ClCompile Include="bitmap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="slider_widget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="color_math.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -120,6 +129,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="librawex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bitmap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="common_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="color_math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -145,6 +163,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="image_scroll_widget.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="slider_widget.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

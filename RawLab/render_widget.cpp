@@ -20,7 +20,6 @@ RenderWidget::~RenderWidget()
 
 bool RenderWidget::SetImageJpegFile(QString filename)
 {
-	bool result = false;
 	QFile file(filename);
 	file.open(QFile::ReadOnly);
 	if (uchar *memdata = file.map(0, file.size()))
@@ -30,45 +29,100 @@ bool RenderWidget::SetImageJpegFile(QString filename)
 	}
 	file.close();
 
-	if (m_pImgBuff)
-	{
-		if (m_tex_id) glDeleteTextures(1, &m_tex_id);
-		glGenTextures(1, &m_tex_id);
-		glBindTexture(GL_TEXTURE_2D, m_tex_id);
-		//	GLenum err_code = glGetError();
-		// glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // по умолчанию выравнивание 32-битное
-		glTexImage2D(
-			GL_TEXTURE_2D, 0,
-			GL_RGB8, m_pImgBuff->m_width, m_pImgBuff->m_height, 0,
-			GL_RGB, GL_UNSIGNED_BYTE, m_pImgBuff->m_buff);
-		//glGenerateMipmap(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);	// GL_LINEAR_MIPMAP_LINEAR
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// GL_LINEAR
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		m_dblZoom = .0;
-		m_isCenter = true;
-		onZoomEvent();
-
-		update();
-
-		setMouseTracking(true);
-
-		result = true;
-	}
-	return result;
+	return UpdateImage();
 }
 
 bool RenderWidget::SetImageRawFile(QString filename)
 {
-	return false;
+	bool result = false;
+	LibRawEx lr;
+	if (lr.open_file(filename.toStdString().c_str()) == LIBRAW_SUCCESS)
+	{
+		// ==> в статус файл открыт
+
+		if (lr.unpack_thumb() == LIBRAW_SUCCESS)
+		{
+			int errcode = 0;
+			if (libraw_processed_image_t *mem_thumb = lr.dcraw_make_mem_thumb(&errcode))
+			{
+				if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
+				{
+					m_pImgBuff = std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true));
+					result = UpdateImage();
+				}
+				else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
+				{
+					// Canon EOS 1D (TIF)
+					// Kodak DCS Pro SLR/n (DCR)
+					// Kodak DC50 (KDC)
+					// Nikon D1 (NEF)
+					BmpBuff buff;
+					buff.m_buff = mem_thumb->data;
+					buff.m_width = mem_thumb->width;
+					buff.m_height = mem_thumb->height;
+					buff.m_bits = mem_thumb->bits;
+					buff.m_colors = mem_thumb->colors;
+					m_pImgBuff = std::move(GetBufFromBitmap(&buff, true));
+					result = UpdateImage();
+				}
+				else throw RawLabException(QString(tr("Unknown preview image format")).toStdString());
+				lr.dcraw_clear_mem(mem_thumb);
+			}
+			else throw RawLabException(QString(tr("Failed to create a preview image in memory: error code %1")).arg(errcode).toStdString());
+		}
+		else
+		{
+			// MINOLTA RD175 (MDC)
+			// нет превью, создать RgbBuffPtr с пустым буфером
+			m_pImgBuff = std::unique_ptr<RgbBuff>(new RgbBuff());
+			result = UpdateImage();
+		}
+	}
+	else throw RawLabException(QString(tr("Unknown RAW format")).toStdString());
+	return result;
+}
+
+bool RenderWidget::UpdateImage()
+{
+	bool result = false;
+	if (m_tex_id) glDeleteTextures(1, &m_tex_id);
+	m_dblZoom = .0;
+	m_isCenter = true;
+
+	setMouseTracking(false);
+
+	if (m_pImgBuff)
+	{
+		if (m_pImgBuff->m_buff)
+		{
+			glGenTextures(1, &m_tex_id);
+			glBindTexture(GL_TEXTURE_2D, m_tex_id);
+			//	GLenum err_code = glGetError();
+			// glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // по умолчанию выравнивание 32-битное
+			glTexImage2D(
+				GL_TEXTURE_2D, 0,
+				GL_RGB8, m_pImgBuff->m_width, m_pImgBuff->m_height, 0,
+				GL_RGB, GL_UNSIGNED_BYTE, m_pImgBuff->m_buff);
+			//glGenerateMipmap(GL_TEXTURE_2D);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);	// GL_LINEAR_MIPMAP_LINEAR
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// GL_LINEAR
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			setMouseTracking(true);
+		}
+		result = true;
+	}
+
+	onZoomEvent();
+	update();
+
+	return result;
 }
 
 void RenderWidget::initializeGL()
 {
-	glClearColor(0.4, 0.4, 0.4, 1);	// задает цвет фона
+	glClearColor(0.5, 0.5, 0.5, 1);	// задает цвет фона
 //	glEnable(GL_DEPTH_TEST);
 //	glEnable(GL_LIGHT0);
 //	glEnable(GL_LIGHTING);
@@ -80,6 +134,17 @@ void RenderWidget::paintGL()
 {
 	if (!m_tex_id || !m_pImgBuff)
 		return;
+
+	if (!m_pImgBuff->m_buff)
+	{
+		QPainter painter(this);
+		painter.setPen(/*Qt::white*/ qRgb(0xC0, 0xC0, 0xC0));
+		painter.setFont(QFont("Helvetica", 16, QFont::Bold));
+//		painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+		painter.drawText(rect(), Qt::AlignHCenter | Qt::AlignVCenter, tr("Preview image is not available"));
+		painter.end();
+		return;
+	}
 
 	QRectF rctImg(0,	// left
 		0,	// top
@@ -179,12 +244,13 @@ void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 
 		emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
 
-		update();
+		repaint();
 	}
 }
 
 void RenderWidget::wheelEvent(QWheelEvent * event)
 {
+	if (!m_pImgBuff) return;
 	Qt::KeyboardModifiers x = event->modifiers();
 
 	QPoint numPixels = event->pixelDelta();
@@ -214,45 +280,37 @@ void RenderWidget::wheelEvent(QWheelEvent * event)
 
 		event->accept();
 	}
-	else if (x & Qt::ControlModifier)
+	else if (x & Qt::ControlModifier) // горизонтальный скролл
 	{
 		if (iSteps > 0)
 			while (iSteps)
 			{
-				if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() + iSteps);
+				onMoveLeft();
 				iSteps--;
 			}
-
 		if (iSteps < 0)
 			while (iSteps)
 			{
-				if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() + iSteps);
+				onMoveRight();
 				iSteps++;
 			}
-
-		applyScrollLimit();
 		event->accept();
-		update();
 	}
-	else
+	else // вертикальный скролл
 	{
 		if (iSteps > 0)
 			while (iSteps)
 			{
-				if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() + iSteps);
+				onMoveUp();
 				iSteps--;
 			}
-
 		if (iSteps < 0)
 			while (iSteps)
 			{
-				if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() + iSteps);
+				onMoveDown();
 				iSteps++;
 			}
-
-		applyScrollLimit();
 		event->accept();
-		update();
 	}
 }
 
@@ -452,6 +510,46 @@ void RenderWidget::onCenter()
 {
 	if (!m_pImgBuff) return;
 	resetCenter();
+	emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
+	update();
+}
+
+void RenderWidget::onMoveLeft()
+{
+	int dblW = m_dblZoom * m_pImgBuff->m_width > width() ? width() : 1;
+	dblW = dblW > 100 ? dblW / 100 : 1;
+	if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() + dblW);
+	applyScrollLimit();
+	emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
+	update();
+}
+
+void RenderWidget::onMoveRight()
+{
+	int dblW = m_dblZoom * m_pImgBuff->m_width > width() ? width() : 1;
+	dblW = dblW > 100 ? dblW / 100 : 1;
+	if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() - dblW);
+	applyScrollLimit();
+	emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
+	update();
+}
+
+void RenderWidget::onMoveUp()
+{
+	double dblH = m_dblZoom * m_pImgBuff->m_height > height() ? height() : 1;
+	dblH = dblH > 100. ? dblH / 100. : 1.;
+	if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() + dblH);
+	applyScrollLimit();
+	emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
+	update();
+}
+
+void RenderWidget::onMoveDown()
+{
+	double dblH = m_dblZoom * m_pImgBuff->m_height > height() ? height() : 1;
+	dblH = dblH > 100. ? dblH / 100. : 1.;
+	if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() - dblH);
+	applyScrollLimit();
 	emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
 	update();
 }

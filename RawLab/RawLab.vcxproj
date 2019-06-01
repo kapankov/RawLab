@@ -185,6 +185,8 @@
     </QtMoc>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bitmap.cpp" />
+    <ClCompile Include="color_math.cpp" />
     <ClCompile Include="GeneratedFiles\qrc_rawlab.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
@@ -281,6 +283,7 @@
     <ClCompile Include="rawlab.cpp" />
     <ClCompile Include="render_widget.cpp" />
     <ClCompile Include="settings.cpp" />
+    <ClCompile Include="slider_widget.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -289,6 +292,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bitmap.h" />
+    <ClInclude Include="color_math.h" />
+    <ClInclude Include="common_types.h" />
     <ClInclude Include="GeneratedFiles\ui_rawlab.h" />
     <QtMoc Include="image_scroll_widget.h">
       <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h;image_scroll_widget.h;%(ForceInclude)</ForceInclude>
@@ -298,6 +304,16 @@
     </QtMoc>
     <ClInclude Include="librawex.h" />
     <ClInclude Include="settings.h" />
+    <QtMoc Include="slider_widget.h">
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack</IncludePath>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdafx.h;slider_widget.h;%(ForceInclude)</ForceInclude>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">stdafx.h;slider_widget.h;%(ForceInclude)</ForceInclude>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdafx.h;slider_widget.h;%(ForceInclude)</ForceInclude>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h;slider_widget.h;%(ForceInclude)</ForceInclude>
+    </QtMoc>
     <ClInclude Include="version.h" />
     <QtMoc Include="rawlab.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

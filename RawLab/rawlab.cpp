@@ -9,10 +9,22 @@ RawLab::RawLab(QWidget *parent)
 {
 	ui.setupUi(this);
 
-	m_settings.setDefaultValue(QString("opendir").toStdWString(), QFileInfo(QCoreApplication::applicationFilePath()).path().toStdWString());
-	m_settings.setDefaultValue(QString("minfilter").toStdWString(), QString("LINEAR").toStdWString());
-	m_settings.setDefaultValue(QString("magfilter").toStdWString(), QString("NEAREST").toStdWString());
+	m_settings.setDefaultValue(QString("opendir").toStdWString(), 
+		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdWString());
+	m_settings.setDefaultValue(QString("minfilter").toStdWString(), 
+		QString("LINEAR").toStdWString());
+	m_settings.setDefaultValue(QString("magfilter").toStdWString(), 
+		QString("NEAREST").toStdWString());
 	m_settings.setPath(QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
+
+	m_MoveLeft = new QShortcut(this);
+	m_MoveLeft->setKey(Qt::CTRL + Qt::Key_Left);
+	m_MoveRight = new QShortcut(this);
+	m_MoveRight->setKey(Qt::CTRL + Qt::Key_Right);
+	m_MoveUp = new QShortcut(this);
+	m_MoveUp->setKey(Qt::CTRL + Qt::Key_Up);
+	m_MoveDown = new QShortcut(this);
+	m_MoveDown->setKey(Qt::CTRL + Qt::Key_Down);
 
 	m_plblState = new QLabel(this);
 	m_plblProgress = new QLabel(this);
@@ -28,6 +40,48 @@ RawLab::RawLab(QWidget *parent)
 	m_plblProgress->setText(tr("Not running"));
 	m_plblInfo->setText(tr("Some information"));
 
+	ui.sliderWBRed->setLabel(tr("Red:"));
+	ui.sliderWBRed->setGradient(QColor::fromRgb(0x33, 0, 0), QColor::fromRgb(0xCC, 0, 0));
+	ui.sliderWBRed->setRange(10.0, 0.0, 4);
+	ui.sliderWBRed->setDefaultValue(1.0);
+	ui.sliderWBRed->setValue(1.0);
+
+	ui.sliderWBGreen->setLabel(tr("Green:"));
+	ui.sliderWBGreen->setGradient(QColor::fromRgb(0, 0x33, 0), QColor::fromRgb(0, 0xCC, 0));
+	ui.sliderWBGreen->setRange(10.0, 0.0, 4);
+	ui.sliderWBGreen->setDefaultValue(1.0);
+	ui.sliderWBGreen->setValue(1.0);
+
+	ui.sliderWBBlue->setLabel(tr("Blue:"));
+	ui.sliderWBBlue->setGradient(QColor::fromRgb(0, 0, 0x33), QColor::fromRgb(0, 0, 0xCC));
+	ui.sliderWBBlue->setRange(10.0, 0.0, 4);
+	ui.sliderWBBlue->setDefaultValue(1.0);
+	ui.sliderWBBlue->setValue(1.0);
+
+	ui.sliderWBGreen2->setLabel(tr("Green2:"));
+	ui.sliderWBGreen2->setGradient(QColor::fromRgb(0, 0x33, 0), QColor::fromRgb(0, 0xCC, 0));
+	ui.sliderWBGreen2->setRange(10.0, 0.0, 4);
+	ui.sliderWBGreen2->setDefaultValue(1.0);
+	ui.sliderWBGreen2->setValue(1.0);
+
+	ui.sliderExposure->setLabel(tr("Exposure:"));
+	ui.sliderExposure->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderExposure->setRange(10.0, -10.0, 2);
+	ui.sliderExposure->setDefaultValue(0.0);
+	ui.sliderExposure->setValue(0.0);
+
+	ui.sliderPreserveHighlights->setLabel(tr("Preserve Highlights:"));
+	ui.sliderPreserveHighlights->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderPreserveHighlights->setRange(1.0, 0.0, 4);
+	ui.sliderPreserveHighlights->setDefaultValue(0.0);
+	ui.sliderPreserveHighlights->setValue(0.0);
+
+	ui.sliderBrightness->setLabel(tr("Brightness:"));
+	ui.sliderBrightness->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderBrightness->setRange(10.0, 0.0, 4);
+	ui.sliderBrightness->setDefaultValue(1.0);
+	ui.sliderBrightness->setValue(1.0);
+
 	ui.imageScrollWidget->setViewport(ui.openGLWidget);
 
 	connect(ui.action_Exit, SIGNAL(triggered()), this, SLOT(onExit()));
@@ -42,6 +96,10 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionZoom_400, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoom_400()));
 	connect(ui.actionZoom_800, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoom_800()));
 	connect(ui.actionCenter, SIGNAL(triggered()), ui.openGLWidget, SLOT(onCenter()));
+	connect(m_MoveLeft, SIGNAL(activated()), ui.openGLWidget, SLOT(onMoveLeft()));
+	connect(m_MoveRight, SIGNAL(activated()), ui.openGLWidget, SLOT(onMoveRight()));
+	connect(m_MoveUp, SIGNAL(activated()), ui.openGLWidget, SLOT(onMoveUp()));
+	connect(m_MoveDown, SIGNAL(activated()), ui.openGLWidget, SLOT(onMoveDown()));
 	connect(ui.openGLWidget, SIGNAL(zoomChanged(int)), this, SLOT(onZoomChanged(int)));
 	connect(ui.openGLWidget, SIGNAL(scrollSizeChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollSizeChanged(int, int)));
 	connect(ui.openGLWidget, SIGNAL(scrollOffsetChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollOffsetChanged(int, int)));
@@ -50,10 +108,15 @@ RawLab::RawLab(QWidget *parent)
 
 RawLab::~RawLab()
 {
-	delete m_plblState;
-	delete m_plblProgress;
-	delete m_plblScale;
 	delete m_plblInfo;
+	delete m_plblScale;
+	delete m_plblProgress;
+	delete m_plblState;
+
+	delete m_MoveDown;
+	delete m_MoveUp;
+	delete m_MoveRight;
+	delete m_MoveLeft;
 }
 
 void RawLab::openFile(const QString& filename)
@@ -62,19 +125,32 @@ void RawLab::openFile(const QString& filename)
 	QFileInfo check_file(filename);
 	if (check_file.exists() && check_file.isFile())
 	{
-		if (check_file.suffix().compare("jpg", Qt::CaseInsensitive) == 0 || check_file.suffix().compare("jpeg", Qt::CaseInsensitive) == 0)
+		if (check_file.suffix().compare("jpg", Qt::CaseInsensitive) == 0 || 
+			check_file.suffix().compare("jpeg", Qt::CaseInsensitive) == 0)
 		{
 			if (!ui.openGLWidget->SetImageJpegFile(filename))
 			{
-				QMessageBox::critical(this, tr("RawLab error"), QString(tr("Unable to open jpeg file:\n")) + filename);
+				QMessageBox::critical(this, tr("RawLab error"), 
+					QString(tr("Unable to open jpeg file:\n")) + filename);
 				return;
 			}
 		}
 		else
 		{
-			if (!ui.openGLWidget->SetImageRawFile(filename))
+			try
 			{
-				QMessageBox::critical(this, tr("RawLab error"), QString(tr("Unable to open RAW file:\n")) + filename);
+				if (!ui.openGLWidget->SetImageRawFile(filename))
+					throw RawLabException(QString(tr("Unable to open RAW file:\n%1").arg(filename)).toStdString());
+			}
+			catch (const RawLabException& e)
+			{
+				QMessageBox::critical(this, tr("RawLab error"), QString(e.what()) + filename);
+				return;
+			}
+			catch (...)
+			{
+				QMessageBox::critical(this, tr("RawLab error"), 
+					QString(tr("An unknown error occurred while opening the RAW file:\n%1").arg(filename)));
 				return;
 			}
 		}
@@ -84,9 +160,12 @@ void RawLab::openFile(const QString& filename)
 
 void RawLab::onOpen()
 {
+	// можно в настройки вынести основные форматы RAW (в первой строке фильтра указывать)
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), "", 
-		tr(	"Adobe Digital Negative files (*.dng);;"
+		tr(	"Camera RAW files (*.dng *.cr2 *.cr3 *.nef *.raf *.3fr *.arw *.ciff *.crw *.dcr *.erf *.iiq *.k25 *.kdc *.mef *.mrw *.nrw *.orf *.pef *.raw *.rw2 *.rwl *.sr2 *.srf *.srw *x3f);;"
+			"Adobe Digital Negative files (*.dng);;"
 			"Canon RAW 2 files (*.cr2);;"
+			"Canon RAW 3 files (*.cr3);;"
 			"Nikon RAW files (*.nef);;"
 			"FujiFilm RAW files (*.raf);;"
 			"Hasselblad RAW files (*.3fr);;"
@@ -138,9 +217,13 @@ void RawLab::onAbout()
 		"IJG JPEG LIBRARY (libjpeg) ver. %6.%7\n"
 		"Copyright(C) 1991 - 2012, Thomas G.Lane, Guido Vollbeding\n"
 		"\n").
-		arg(QString::number(MAJOR_VER), QString::number(MINOR_VER), QString::number(RELEASE_VER), QString::number(BUILD_VER), 
+		arg(QString::number(MAJOR_VER), 
+			QString::number(MINOR_VER), 
+			QString::number(RELEASE_VER), 
+			QString::number(BUILD_VER), 
 			QT_VERSION_STR,
-			QString::number(JPEG_LIB_VERSION_MAJOR), QString::number(JPEG_LIB_VERSION_MINOR)
+			QString::number(JPEG_LIB_VERSION_MAJOR), 
+			QString::number(JPEG_LIB_VERSION_MINOR)
 		) +
 		QString("GNU LIBICONV ver. %1.%2\n"
 		"Copyright (C) 1999-2019 Free Software Foundation, Inc.\n"
@@ -160,7 +243,8 @@ void RawLab::onAbout()
 		"\n"
 		"LibRaw ver. %6\n"
 		"Copyright 2008-2019 LibRaw LLC (info@libraw.org)").
-		arg(QString::number((_LIBICONV_VERSION >> 8) & 0xFF), QString::number(_LIBICONV_VERSION & 0xFF),
+		arg(QString::number((_LIBICONV_VERSION >> 8) & 0xFF), 
+			QString::number(_LIBICONV_VERSION & 0xFF),
 			LIBXML_DOTTED_VERSION,
 			QString::number(LCMS_VERSION / 1000.0),
 			QString(PTW32_VERSION_STRING).replace(", ", "."),

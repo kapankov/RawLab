@@ -17,6 +17,9 @@ void ImageScrollWidget::onScrollOffsetChanged(int xOffset, int yOffset)
 	verticalScrollBar()->setValue(-yOffset);
 }
 
+/*!
+	новый размер изображения: x - width, y - height
+*/
 void ImageScrollWidget::onScrollSizeChanged(int x, int y)
 {
 	m_ignoreScrollContents = true;
@@ -30,6 +33,7 @@ void ImageScrollWidget::onScrollSizeChanged(int x, int y)
 		}
 		horizontalScrollBar()->setPageStep(areaSize.width()/2);
 		horizontalScrollBar()->setRange(0, x - areaSize.width());
+		horizontalScrollBar()->setSingleStep(areaSize.width() > 100 ? areaSize.width() / 100 : 1);
 	}
 	else
 	{
@@ -45,6 +49,7 @@ void ImageScrollWidget::onScrollSizeChanged(int x, int y)
 		}
 		verticalScrollBar()->setPageStep(areaSize.height()/2);
 		verticalScrollBar()->setRange(0, y - areaSize.height());
+		verticalScrollBar()->setSingleStep(areaSize.height() > 100 ? areaSize.height() / 100 : 1);
 	}
 	else
 	{
