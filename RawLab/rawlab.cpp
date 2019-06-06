@@ -82,6 +82,24 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderBrightness->setDefaultValue(1.0);
 	ui.sliderBrightness->setValue(1.0);
 
+	ui.sliderClippedPixels->setLabel(tr("Clipped Pixels:"));
+	ui.sliderClippedPixels->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderClippedPixels->setRange(1.0, 0.0, 4);
+	ui.sliderClippedPixels->setDefaultValue(0.001);
+	ui.sliderClippedPixels->setValue(0.001);
+
+	ui.cmbHighlightMode->addItem(tr("0 - Clip"));
+	ui.cmbHighlightMode->addItem(tr("1 - Unclip"));
+	ui.cmbHighlightMode->addItem(tr("2 - Blend"));
+	ui.cmbHighlightMode->addItem(tr("3 - Rebuild"));
+	ui.cmbHighlightMode->addItem(tr("4 - Rebuild"));
+	ui.cmbHighlightMode->addItem(tr("5 - Rebuild"));
+	ui.cmbHighlightMode->addItem(tr("6 - Rebuild"));
+	ui.cmbHighlightMode->addItem(tr("7 - Rebuild"));
+	ui.cmbHighlightMode->addItem(tr("8 - Rebuild"));
+	ui.cmbHighlightMode->addItem(tr("9 - Rebuild"));
+	ui.cmbHighlightMode->setCurrentIndex(0);
+
 	ui.imageScrollWidget->setViewport(ui.openGLWidget);
 
 	connect(ui.action_Exit, SIGNAL(triggered()), this, SLOT(onExit()));

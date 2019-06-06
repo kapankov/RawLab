@@ -4,6 +4,43 @@
 #include "stdafx.h"
 #include "slider_widget.h"
 
+class SliderDoubleValidator : public QDoubleValidator
+{
+public:
+	SliderDoubleValidator(double bottom, double top, int decimals, QObject *parent = 0)
+		:QDoubleValidator(bottom, top, decimals, parent)
+	{
+		setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
+	};
+	QValidator::State validate(QString &input, int &pos) const
+	{
+		/*
+		 * Original Qt Documentation:
+		 * ---------
+		 * QDoubleValidator::validate()
+		 * Returns Intermediate if input contains a double that is
+		 * outside the range or is in the wrong format; e.g. with too many
+		 * digits after the decimal point or is empty.
+		 * ---------
+		 * Problem: Not what the user expects.
+		 * Example: Range 0.0-10.0 with 1 digit (QDoubleValidator( 0, 10, 1, parent ) ):
+		 * QDoubleValidator::validate() reports intermediate for "10.3".
+		 * However we expect invalid instead and QLineEdit to decline input.
+		 * Fix this by overloading the validate() operator.
+		 */
+		const QValidator::State origState = QDoubleValidator::validate(input, pos);
+		double t = top();
+		double b = bottom();
+		double i = QLocale(QLocale::English, QLocale::UnitedStates).toDouble(input); // not QLocale::system()
+		if ((origState == QValidator::Intermediate) && (i > t || i < b))
+			return QValidator::Invalid;
+		else if ((origState == QValidator::Acceptable) && input.contains(','))
+			return QValidator::Invalid;
+		else
+			return origState;
+	}
+};
+
 /*
 | Label: | ---------0------ | Editor |
 */
@@ -12,12 +49,15 @@
 #define KNOBHGTH 10
 
 SliderWidget::SliderWidget(QWidget* parent) : 
-	m_value(0.0)
+	m_mode(smStandard)
+	, m_value(0.0)
+	, m_defvalue(0.0)
 	, m_isCaptured(false)
 	, m_top(1.0)
 	, m_bottom(0.0)
 	, m_decimals(2)
 //	, m_pos(0.0)
+//	, m_dblValidator(nullptr)
 	, m_editor(nullptr)
 	, m_BackgroundColor(Qt::gray)
 	, m_LabelColor(Qt::white)
@@ -27,6 +67,10 @@ SliderWidget::SliderWidget(QWidget* parent) :
 
 {
 	setMouseTracking(true);
+	setContextMenuPolicy(Qt::CustomContextMenu);
+
+	connect(this, SIGNAL(customContextMenuRequested(const QPoint &)),
+		this, SLOT(onContextMenu(const QPoint &)));
 }
 
 SliderWidget::~SliderWidget()
@@ -110,32 +154,43 @@ void SliderWidget::setDisabledBorderColor(const QColor& c)
 
 void SliderWidget::mousePressEvent(QMouseEvent * event)
 {
-	double pos = getPos(event->pos());
-	if (pos >= 0.0)
+	if (event->buttons() & Qt::LeftButton)
 	{
-		m_isCaptured = true;
-		setValueByPos(pos);
-		repaint();
-	}
-	else if (!m_editor)
-	{
-		QRect r = getEditorRect();
-		if (r.contains(event->pos()))
+		double pos = getPos(event->pos());
+		if (pos >= 0.0)
 		{
-			m_editor = new SliderEditor(getStrValue(m_value), this);
-			m_editor->move(r.left(), r.top());
-			m_editor->resize(r.width(), r.height());
-			m_editor->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-			if (m_dblValidator = new SliderDoubleValidator(m_bottom, m_top, m_decimals, m_editor))
+			m_isCaptured = true;
+			setValueByPos(pos);
+			repaint();
+		}
+		else if (!m_editor)
+		{
+			QRect r = getEditorRect();
+			if (r.contains(event->pos()))
 			{
-				m_dblValidator->setNotation(QDoubleValidator::StandardNotation);
-				m_editor->setValidator(m_dblValidator);
-				connect(m_editor, SIGNAL(lostFocus()), this, SLOT(onEditingFinished()));
-				connect(m_editor, SIGNAL(editingFinished()), this, SLOT(onEditingFinished()));
-				connect(m_editor, SIGNAL(escapePressed()), this, SLOT(onEscapePressed()));
+				m_editor = new (std::nothrow) SliderEditor(getStrValue(m_value), this);
+				if (m_editor)
+				{
+					m_preeditvalue = m_value;
+					m_editor->move(r.left(), r.top());
+					m_editor->resize(r.width(), r.height());
+					m_editor->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+					if (SliderDoubleValidator* dblValidator = new (std::nothrow) SliderDoubleValidator(m_bottom, m_top, m_decimals, m_editor))
+					{
+						dblValidator->setNotation(QDoubleValidator::StandardNotation);
+						m_editor->setValidator(dblValidator);
+						connect(m_editor, SIGNAL(lostFocus()), this, SLOT(onEditingFinished()));
+						connect(m_editor, SIGNAL(editingFinished()), this, SLOT(onEditingFinished()));
+						connect(m_editor, SIGNAL(upValue()), this, SLOT(onUpValue()));
+						connect(m_editor, SIGNAL(downValue()), this, SLOT(onDownValue()));
+						connect(m_editor, SIGNAL(textEdited(const QString&)), this, SLOT(onTextEdited(const QString&)));
+						connect(m_editor, SIGNAL(escapePressed()), this, SLOT(onEscapePressed()));
+					}
+					m_editor->selectAll();
+					m_editor->show();
+					m_editor->setFocus();
+				}
 			}
-			m_editor->show();
-			m_editor->setFocus();
 		}
 	}
 }
@@ -239,11 +294,35 @@ QString SliderWidget::getStrValue(double value) const
 	return s;
 }
 
+void SliderWidget::slideValue(bool up)
+{
+	if (m_editor)
+	{
+		QString text = m_editor->text();
+		double value = text.isEmpty() ? m_defvalue : text.toDouble();
+		if (up)
+			value += (m_top - m_bottom) / 100;
+		else
+			value -= (m_top - m_bottom) / 100;
+		if (value > m_top) value = m_top;
+		else if (value < m_bottom) value = m_bottom;
+		m_value = value;
+		m_editor->setText(getStrValue(m_value));
+		update();
+	}
+}
+
+void SliderWidget::setMode(SliderMode mode)
+{
+	m_mode = mode;
+}
+
 void SliderWidget::onEditingFinished()
 {
 	if (m_editor)
 	{
-		m_value = m_editor->text().toDouble();
+		QString text = m_editor->text();
+		m_value = text.isEmpty() ? m_defvalue : text.toDouble();
 		SliderEditor* editor = m_editor;
 		m_editor = nullptr;
 		//		editor->hide();
@@ -256,10 +335,77 @@ void SliderWidget::onEscapePressed()
 {
 	if (m_editor)
 	{
+		m_value = m_preeditvalue;
 		SliderEditor* editor = m_editor;
 		m_editor = nullptr;
 		delete editor;
+		update();
 	}
+}
+
+void SliderWidget::onUpValue()
+{
+	slideValue(true);
+}
+
+void SliderWidget::onDownValue()
+{
+	slideValue(false);
+}
+
+void SliderWidget::onTextEdited(const QString & text)
+{
+	if (m_editor)
+	{
+		m_value = text.isEmpty() ? m_defvalue/*m_preeditvalue*/ : text.toDouble();
+		update();
+	}
+}
+
+void SliderWidget::onContextMenu(const QPoint & pos)
+{
+	if (!m_editor)
+	{
+		QMenu contextMenu(tr("Slider context menu"), this);
+
+		QAction action1("Change bottom of range", this);
+		connect(&action1, SIGNAL(triggered()), this, SLOT(changeBottom()));
+		contextMenu.addAction(&action1);
+
+		QAction action2("Change top of range", this);
+		connect(&action2, SIGNAL(triggered()), this, SLOT(changeTop()));
+		contextMenu.addAction(&action2);
+
+		QAction action3("Change floating point precision", this);
+		connect(&action3, SIGNAL(triggered()), this, SLOT(changePrecision()));
+		contextMenu.addAction(&action3);
+
+		QAction action4("Change default value", this);
+		connect(&action4, SIGNAL(triggered()), this, SLOT(changeDefault()));
+		contextMenu.addAction(&action4);
+
+		contextMenu.exec(mapToGlobal(pos));
+	}
+}
+
+void SliderWidget::changeBottom()
+{
+	setMode(smBottom);
+}
+
+void SliderWidget::changeTop()
+{
+	setMode(smTop);
+}
+
+void SliderWidget::changePrecision()
+{
+	setMode(smPrecision);
+}
+
+void SliderWidget::changeDefault()
+{
+	setMode(smDefault);
 }
 
 bool SliderWidget::event(QEvent * event)
@@ -305,10 +451,13 @@ void SliderWidget::paintEvent(QPaintEvent* event)
 	painter.setPen(isEnabled() ? getLabelColor() : getDisabledLabelColor());
 	painter.drawText(r, Qt::AlignRight | Qt::AlignVCenter, m_Label);
 	// Value
-	r = rect();
-	r.setLeft(r.right() - EDITORWIDTH + 8);
-	r.setRight(r.right() - 2);
-	painter.drawText(r, Qt::AlignRight | Qt::AlignVCenter, getStrValue(m_value));
+	if (!m_editor)
+	{
+		r = rect();
+		r.setLeft(r.right() - EDITORWIDTH + 8);
+		r.setRight(r.right() - 2);
+		painter.drawText(r, Qt::AlignRight | Qt::AlignVCenter, getStrValue(m_value));
+	}
 	// Central slider
 	r = getSliderRect();
 	painter.fillRect(r, isEnabled() ? getBorderColor() : getDisabledBorderColor());
@@ -358,7 +507,7 @@ void SliderWidget::paintEvent(QPaintEvent* event)
 	QImage knob(const_cast<uchar*>(isEnabled() ? m_btKnob : m_btDsblKnob),
 		KNOBWDTH, 
 		KNOBHGTH, 
-		sizeof(isEnabled() ? m_btKnob : m_btDsblKnob) / KNOBHGTH, 
+		(isEnabled() ? sizeof(m_btKnob) : sizeof(m_btDsblKnob)) / KNOBHGTH,
 		QImage::Format_ARGB32);
 
 	QRect rctKnob = rect();

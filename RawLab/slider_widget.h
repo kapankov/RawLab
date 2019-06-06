@@ -10,10 +10,11 @@
 		2. –едактор
 			 лик курсора на текущем значении (справа от слайдера) показывает однострочный редактор.
 			¬вод нового значени€ происходит при нажатии клавиши Enter или потере фокуса в редакторе
-			ќтказатьс€ от ввода можно нажав клавишу Escape
+			ќтказатьс€ от ввода можно нажав клавишу Escape.
+			ѕри пустом значении слайдер устанавливаетс€ в значение по умолчанию.
 		3. ѕоказываютс€ подсказки (раскрываетс€ смысл надписи, диапазон и значение по умолчанию) 
 			при наведении мышью на область надписи и остальную область виджета
-		4. ƒиапазон значений, точность (количество знаков после зап€той) и значение по умолчани 
+		4. ƒиапазон значений, точность (количество знаков после зап€той) и значение по умолчанию 
 			задаетс€ при создании виджета, а также через контектное меню
 
 	\authors Konstantin A. Pankov, explorus@mail.ru
@@ -30,49 +31,14 @@
 
 #include <QObject>
 
-class SliderDoubleValidator : public QDoubleValidator
-{
-public:
-	SliderDoubleValidator(double bottom, double top, int decimals, QObject *parent = 0)
-		:QDoubleValidator(bottom, top, decimals, parent) 
-	{
-		setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
-	};
-	QValidator::State validate(QString &input, int &pos) const
-	{
-		/*
-		 * Original Qt Documentation:
-		 * ---------
-		 * QDoubleValidator::validate()
-		 * Returns Intermediate if input contains a double that is
-		 * outside the range or is in the wrong format; e.g. with too many
-		 * digits after the decimal point or is empty.
-		 * ---------
-		 * Problem: Not what the user expects.
-		 * Example: Range 0.0-10.0 with 1 digit (QDoubleValidator( 0, 10, 1, parent ) ):
-		 * QDoubleValidator::validate() reports intermediate for "10.3".
-		 * However we expect invalid instead and QLineEdit to decline input.
-		 * Fix this by overloading the validate() operator.
-		 */
-		const QValidator::State origState = QDoubleValidator::validate(input, pos);
-		double t = top();
-		double b = bottom();
-		double i = QLocale(QLocale::English, QLocale::UnitedStates).toDouble(input); // not QLocale::system()
-		if ((origState == QValidator::Intermediate) && (i > t || i < b))
-			return QValidator::Invalid;
-		else if ((origState == QValidator::Acceptable) && input.contains(','))
-			return QValidator::Invalid;
-		else
-			return origState;
-	}
-};
-
 class SliderEditor : public QLineEdit
 {
 	Q_OBJECT
 signals:
 	void lostFocus();
 	void escapePressed();
+	void upValue();
+	void downValue();
 public:
 	explicit SliderEditor(const QString& s, QWidget* parent = nullptr)
 		: QLineEdit(s, parent) {}
@@ -84,9 +50,20 @@ private:
 
 	void keyPressEvent(QKeyEvent *event)
 	{
-		if (event->key() == Qt::Key_Escape)
-			emit escapePressed();
-		else QLineEdit::keyPressEvent(event);
+		switch (event->key())
+		{
+			case Qt::Key_Escape:
+				emit escapePressed();
+				break;
+			case Qt::Key_Up:
+				emit upValue();
+				break;
+			case Qt::Key_Down:
+				emit downValue();
+				break;
+			default:
+				QLineEdit::keyPressEvent(event);
+		}
 	}
 };
 
@@ -99,6 +76,16 @@ class SliderWidget : public QWidget
 	Q_PROPERTY(QColor BorderColor READ getBorderColor WRITE setBorderColor DESIGNABLE true)
 	Q_PROPERTY(QColor DisabledLabelColor READ getDisabledLabelColor WRITE setDisabledLabelColor DESIGNABLE true)
 	Q_PROPERTY(QColor DisabledBorderColor READ getDisabledBorderColor WRITE setDisabledBorderColor DESIGNABLE true)
+
+	enum SliderMode
+	{
+		smStandard,
+		smBottom,
+		smTop,
+		smPrecision,
+		smDefault
+	};
+
 
 	const unsigned char m_btKnob[440] = {
 		0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x15, 0x15, 0x15, 0xFF, 0x69, 0x69, 0x69, 0xFF, 0x15, 0x15, 0x15, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00,
@@ -126,15 +113,16 @@ class SliderWidget : public QWidget
 		0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x6E, 0x6E, 0x6E, 0xFF, 0x6E, 0x6E, 0x6E, 0xFF, 0x6E, 0x6E, 0x6E, 0xFF, 0x6E, 0x6E, 0x6E, 0xFF, 0x6E, 0x6E, 0x6E, 0xFF, 0x6E, 0x6E, 0x6E, 0xFF, 0x6E, 0x6E, 0x6E, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00
 	};
 	
+	SliderMode m_mode;
 	double m_value;	// текущее значение ползунка, должно быть между m_top и m_bottom
 	double m_defvalue;	// значение по умолчанию
 	double m_top;	// верхн€€ граница слайдера
 	double m_bottom;	// нижн€€ граница слайдера
 	int m_decimals;	// кол-во знаков после зап€той (decimals of precision)
+	double m_preeditvalue; // сохраненное значение на случай escape в редакторе
 	bool m_isCaptured; // режим сдвига ползунка (ухватили мышкой и держим)
 	QString m_Label;	// надпись слева от слайдера
 	SliderEditor* m_editor;	// окно QLineEdit
-	SliderDoubleValidator* m_dblValidator;	// валидатор введенных значений
 	// stylesheet
 	QColor m_BackgroundColor;
 	QColor m_LabelColor;
@@ -170,6 +158,15 @@ signals:
 public slots:
 	void onEditingFinished();
 	void onEscapePressed();
+	void onUpValue();
+	void onDownValue();
+	void onTextEdited(const QString &text);
+	void onContextMenu(const QPoint &pos);
+	void changeBottom();
+	void changeTop();
+	void changePrecision();
+	void changeDefault();
+
 private:
 	bool event(QEvent *event) override;
 	void paintEvent(QPaintEvent* event) override;
@@ -190,6 +187,10 @@ private:
 	QRect getEditorRect() const;
 	// вернуть строковое представление
 	QString getStrValue(double value) const;
+	// дл€ реакции на клавиши вверх-вниз
+	void slideValue(bool up);
+
+	void setMode(SliderMode mode);
 };
 
 #endif

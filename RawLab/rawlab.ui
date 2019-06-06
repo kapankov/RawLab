@@ -19,12 +19,12 @@ background-color:#808080;
 }
 
 QMenu{
-background-color:#A0A0A0;
+background-color:#747474;
 color: #F0F0F0;
 border: 1px solid #606060;
 }
 QMenu:Item{
-background-color:#A0A0A0;
+background-color:#747474;
 color: #F0F0F0;
 }
 QMenu:Item:selected{
@@ -40,7 +40,7 @@ background-color:#808080;
 color: #E0E0E0;
 }
 QMenuBar:Item:selected{
-background-color:#A0A0A0;
+background-color:#747474;
 color: #F0F0F0;
 }
 
@@ -296,6 +296,67 @@ color: #E0E0E0;
 
 QCheckBox{
 color: #E0E0E0;
+}
+
+QComboBox {
+color: #E0E0E0;
+/*background-color: #808080;
+selection-background-color: #8C8C8C;*/
+border: 1px solid #404040;
+border-radius: 2px;
+min-height: 1.5em;
+padding-left: 4px;
+padding-right: 4px;
+}
+
+QComboBox:!editable {
+background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #848484, stop: 1 #707070);
+}
+
+QComboBox::drop-down {
+background: #747474;
+subcontrol-origin: padding;
+subcontrol-position: top right;
+width: 15px;
+border-left-width: 1px;
+border-left-color: #404040;
+border-left-style: solid; /* just a single line */
+border-top-right-radius: 2px; /* same radius as the QComboBox */
+border-bottom-right-radius: 2px;
+}
+
+QComboBox::down-arrow {
+image: url(&quot;:/images/Resources/down_arrow_disabled.png&quot;);
+}
+
+QComboBox::down-arrow:on, QComboBox::down-arrow:hover, QComboBox::down-arrow:focus {
+image: url(&quot;:/images/Resources/down_arrow.png&quot;);
+}
+
+QComboBox QAbstractItemView {
+background-color: #606060;
+border-radius: 2px;
+border: 1px solid #404040;
+selection-color: #404040;
+selection-background-color: #A0A0A0;
+}
+
+QCheckBox {
+spacing: 5px;
+}
+
+QCheckBox::indicator {
+width: 13px;
+height: 13px;
+}
+
+QCheckBox::indicator:unchecked {
+image: url(:/images/Resources/chkbox_unchecked.png);
+}
+
+QCheckBox::indicator:checked {
+image: url(:/images/Resources/chkbox_checked.png);
 }
 
 SliderWidget {
@@ -593,6 +654,74 @@ border-radius: 2px;
              </widget>
             </item>
             <item>
+             <widget class="SliderWidget" name="sliderClippedPixels" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Portion of clipped pixels when auto brightness increase is used</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,2">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Highlight Mode:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <property name="indent">
+                 <number>7</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="cmbHighlightMode">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>22</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="Line" name="line_2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="verticalSpacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -600,7 +729,7 @@ border-radius: 2px;
               <property name="sizeHint" stdset="0">
                <size>
                 <width>20</width>
-                <height>384</height>
+                <height>40</height>
                </size>
               </property>
              </spacer>
