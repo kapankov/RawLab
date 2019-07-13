@@ -20,7 +20,7 @@ public:
 	~CSettings() {}
 
 	void setDefaultValue(const std::wstring& name, const std::wstring& value);
-	void setPath(std::string path);
+	void setPath(const std::string& path);
 	bool setValue(const std::wstring& name, const std::wstring& value);
 	std::wstring getValue(const std::wstring& name);
 };

@@ -6,20 +6,22 @@
 RgbBuffPtr GetBufFromBitmap(const BmpBuff * bmp, bool mirror)
 {
 	if (!bmp) return nullptr;
-	size_t ulDwAlgnRowSize = (bmp->m_width) * 3;
-	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += 4 - (ulDwAlgnRowSize & 3);
+	size_t height = static_cast<size_t>(bmp->m_height);
+	size_t width = static_cast<size_t>(bmp->m_width);
+	size_t ulDwAlgnRowSize = width * 3;
+	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += SIZEOFDWORD - (ulDwAlgnRowSize & 3);
 
 	auto ptr = std::unique_ptr<RgbBuff>(new RgbBuff());
-	ptr->m_buff = new unsigned char[ulDwAlgnRowSize * bmp->m_height];
+	ptr->m_buff = new unsigned char[ulDwAlgnRowSize * height];
 
 	if (bmp->m_colors == 3)
 	{
 		size_t szScanline = 0;
-		while (szScanline < bmp->m_height)
+		while (szScanline < height)
 		{
-			unsigned char* lpbDst = &ptr->m_buff[(mirror ? bmp->m_height - szScanline - 1 : szScanline)*ulDwAlgnRowSize];
-			unsigned char* lpbSrc = &(bmp->m_buff)[szScanline*(bmp->m_width * bmp->m_colors * bmp->m_bits / 8)];
-			for (size_t count = 0; count < bmp->m_width; count++)
+			unsigned char* lpbDst = &ptr->m_buff[(mirror ? height - szScanline - 1 : szScanline)*ulDwAlgnRowSize];
+			unsigned char* lpbSrc = &(bmp->m_buff)[szScanline*(width * bmp->m_colors * bmp->m_bits / 8)];
+			for (size_t count = 0; count < width; count++)
 			{
 				*(lpbDst + count * 3 + 0) = *(lpbSrc + count * 3 + 0);
 				*(lpbDst + count * 3 + 1) = *(lpbSrc + count * 3 + 1);
@@ -31,11 +33,11 @@ RgbBuffPtr GetBufFromBitmap(const BmpBuff * bmp, bool mirror)
 	else if (bmp->m_colors == 1)
 	{
 		size_t szScanline = 0;
-		while (szScanline < bmp->m_height)
+		while (szScanline < height)
 		{
-			unsigned char* lpbDst = &ptr->m_buff[(mirror ? bmp->m_height - szScanline - 1 : szScanline)*ulDwAlgnRowSize];
-			unsigned char* lpbSrc = &(bmp->m_buff)[szScanline*(bmp->m_width * bmp->m_colors * bmp->m_bits / 8)];
-			for (size_t count = 0; count < bmp->m_width; count++)
+			unsigned char* lpbDst = &ptr->m_buff[(mirror ? height - szScanline - 1 : szScanline)*ulDwAlgnRowSize];
+			unsigned char* lpbSrc = &(bmp->m_buff)[szScanline*(width * bmp->m_colors * bmp->m_bits / 8)];
+			for (size_t count = 0; count < width; count++)
 			{
 				*(lpbDst + count * 3 + 0) =
 					*(lpbDst + count * 3 + 1) =

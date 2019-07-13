@@ -45,6 +45,7 @@ public:
 | Label: | ---------0------ | Editor |
 */
 #define EDITORWIDTH 64
+#define EDITORLEFTMARGIN 4
 #define KNOBWDTH 11
 #define KNOBHGTH 10
 
@@ -56,8 +57,7 @@ SliderWidget::SliderWidget(QWidget* parent) :
 	, m_top(1.0)
 	, m_bottom(0.0)
 	, m_decimals(2)
-//	, m_pos(0.0)
-//	, m_dblValidator(nullptr)
+	, m_preeditvalue(0.0)
 	, m_editor(nullptr)
 	, m_BackgroundColor(Qt::gray)
 	, m_LabelColor(Qt::white)
@@ -95,6 +95,11 @@ void SliderWidget::setRange(double top, double bottom, int decimals)
 	m_bottom = bottom;
 	m_decimals = decimals;
 	update();
+}
+
+std::tuple<double, double, int> SliderWidget::getRange() const
+{
+	return std::make_tuple(m_top, m_bottom, m_decimals);
 }
 
 void SliderWidget::setDefaultValue(double value)
@@ -208,7 +213,7 @@ void SliderWidget::mouseDoubleClickEvent(QMouseEvent * event)
 		r.setRight(r.width() / 3 - 8);
 		if (r.contains(event->pos()))
 		{
-			m_value = m_defvalue;
+			emit valueChanged(m_value = m_defvalue);
 			update();
 		}
 	}
@@ -261,21 +266,22 @@ double SliderWidget::getPos(const QPoint& p) const
 
 void SliderWidget::setValueByPos(double pos)
 {
-	m_value = m_bottom + (m_top - m_bottom) * pos;
+	emit valueChanged(m_value = m_bottom + (m_top - m_bottom) * pos);
 }
 
 QRect SliderWidget::getEditorRect() const
 {
 	QRect r = rect();
-	r.setLeft(r.right() - EDITORWIDTH + 4);
+	r.setLeft(r.right() - EDITORWIDTH + EDITORLEFTMARGIN);
 	r.setTop(r.top() + 2);
 	r.setBottom(r.bottom() - 2);
 	return r;
 }
 
-void SliderWidget::setValue(double value)
+void SliderWidget::setValue(double value, bool update)
 {
 	m_value = value;
+	if (update) this->update();
 }
 
 double SliderWidget::getValue() const
@@ -309,6 +315,7 @@ void SliderWidget::slideValue(bool up)
 		m_value = value;
 		m_editor->setText(getStrValue(m_value));
 		update();
+		emit valueChanged(m_value);
 	}
 }
 
@@ -328,6 +335,7 @@ void SliderWidget::onEditingFinished()
 		//		editor->hide();
 		delete editor;
 		update();
+		emit valueChanged(m_value);
 	}
 }
 
@@ -340,6 +348,7 @@ void SliderWidget::onEscapePressed()
 		m_editor = nullptr;
 		delete editor;
 		update();
+		emit valueChanged(m_value);
 	}
 }
 
@@ -359,12 +368,13 @@ void SliderWidget::onTextEdited(const QString & text)
 	{
 		m_value = text.isEmpty() ? m_defvalue/*m_preeditvalue*/ : text.toDouble();
 		update();
+		emit valueChanged(m_value);
 	}
 }
 
 void SliderWidget::onContextMenu(const QPoint & pos)
 {
-	if (!m_editor)
+/*	if (!m_editor)
 	{
 		QMenu contextMenu(tr("Slider context menu"), this);
 
@@ -385,7 +395,7 @@ void SliderWidget::onContextMenu(const QPoint & pos)
 		contextMenu.addAction(&action4);
 
 		contextMenu.exec(mapToGlobal(pos));
-	}
+	}*/
 }
 
 void SliderWidget::changeBottom()
@@ -494,9 +504,9 @@ void SliderWidget::paintEvent(QPaintEvent* event)
 	r = getSliderRect();
 	QLine lines[5];
 	lines[0].setLine(r.left(), r.top() - 6, r.left(), r.top() - 3);
-	lines[1].setLine(r.left() + r.width() / 4 - 1, r.top() - 5, r.left() + r.width() / 4 - 1, r.top() - 3);
-	lines[2].setLine(r.left() + r.width()/2 - 1, r.top() - 6, r.left() + r.width() / 2 - 1, r.top() - 3);
-	lines[3].setLine(r.left() + r.width() * 3 / 4 - 1, r.top() - 5, r.left() + r.width() * 3/ 4 - 1, r.top() - 3);
+	lines[1].setLine(r.left() + (r.width()>>2) - 1, r.top() - 5, r.left() + (r.width()>>2) - 1, r.top() - 3);
+	lines[2].setLine(r.left() + (r.width()>>1) - 1, r.top() - 6, r.left() + (r.width()>>1) - 1, r.top() - 3);
+	lines[3].setLine(r.left() + ((r.width() * 3)>>2) - 1, r.top() - 5, r.left() + ((r.width() * 3)>>2) - 1, r.top() - 3);
 	lines[4].setLine(r.right(), r.top() - 6, r.right(), r.top() - 3);
 	painter.setPen(isEnabled() ? getBorderColor() : getDisabledBorderColor());
 	painter.drawLines(lines, 5);

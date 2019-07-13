@@ -136,11 +136,12 @@ public:
 	explicit SliderWidget(QWidget* parent = 0);
 	~SliderWidget();
 	
-	void setValue(double value);
+	void setValue(double value, bool update = false);
 	double getValue() const;
 	void setLabel(const QString &value);
 	void setGradient(const QColor& a, const QColor& b);
 	void setRange(double top, double bottom, int decimals);
+	std::tuple<double, double, int> getRange() const;
 	void setDefaultValue(double value);
 
 	QColor getBackgroundColor() const;
@@ -154,7 +155,7 @@ public:
 	QColor getDisabledBorderColor() const;
 	void setDisabledBorderColor(const QColor& c);
 signals:
-
+	void valueChanged(double value);
 public slots:
 	void onEditingFinished();
 	void onEscapePressed();

@@ -6,6 +6,11 @@
 #include <string>
 #include <codecvt>
 #include <map>
+#include <thread>
+#include <atomic>
+#include <chrono>
+#include <array>
+//#include <omp.h>	// OpenMP
 #include <winsock2.h>
 #include <iconv.h>
 #include <libxml/parser.h>

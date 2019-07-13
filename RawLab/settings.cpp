@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 
-std::unique_ptr<xmlChar[]> wstringToXmlChar(std::wstring w)
+std::unique_ptr<xmlChar[]> wstringToXmlChar(const std::wstring& w)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> cnv;
 	std::string s = cnv.to_bytes(w);
@@ -24,7 +24,7 @@ void CSettings::setDefaultValue(const std::wstring & name, const std::wstring & 
 	m_settingsmap[name] = value;
 }
 
-void CSettings::setPath(std::string path)
+void CSettings::setPath(const std::string& path)
 {
 	m_path = path+"/settings.xml";
 	bool isnew = false;
@@ -40,7 +40,7 @@ void CSettings::setPath(std::string path)
 		if (isnew)
 		{
 			std::map<std::wstring, std::wstring>::iterator it;
-			for (it = m_settingsmap.begin(); it != m_settingsmap.end(); it++)
+			for (it = m_settingsmap.begin(); it != m_settingsmap.end(); ++it)
 			{
 				std::unique_ptr<xmlChar[]> n = wstringToXmlChar(it->first);
 				std::unique_ptr<xmlChar[]> v = wstringToXmlChar(it->second);
@@ -54,7 +54,7 @@ void CSettings::setPath(std::string path)
 void CSettings::setValue(const xmlDocPtr doc, const xmlChar* nodeName, const xmlChar* nodeContent)
 {
 	xmlNodePtr root_node = xmlDocGetRootElement(doc);
-	if (!root_node || (root_node && xmlStrcmp(root_node->name, (const xmlChar *) "settings")))
+	if (!root_node || xmlStrcmp(root_node->name, (const xmlChar *) "settings"))
 	{
 		root_node = xmlNewNode(nullptr, BAD_CAST "settings");
 		xmlDocSetRootElement(doc, root_node);
@@ -114,7 +114,7 @@ std::wstring CSettings::getValue(const std::wstring & name)
 				{
 					xmlNodePtr curNode = root_node->xmlChildrenNode;
 					while (curNode != nullptr) {
-						if ((!xmlStrcmp(curNode->name, nodeName.get())))
+						if (!xmlStrcmp(curNode->name, nodeName.get()))
 						{
 							if (xmlChar* nodeContent = xmlNodeListGetString(doc, curNode->xmlChildrenNode, 1))
 							{
@@ -133,6 +133,7 @@ std::wstring CSettings::getValue(const std::wstring & name)
 				// вернуть дефолтное значение из map
 				return m_settingsmap[name];
 			}
+			return r;
 		}
 	}
 	return std::wstring();

@@ -18,68 +18,10 @@ RenderWidget::~RenderWidget()
 {
 }
 
-bool RenderWidget::SetImageJpegFile(QString filename)
+bool RenderWidget::setRgbBuff(RgbBuffPtr ptr)
 {
-	QFile file(filename);
-	file.open(QFile::ReadOnly);
-	if (uchar *memdata = file.map(0, file.size()))
-	{
-		m_pImgBuff = std::move(GetBufFromJpeg(memdata, file.size(), true));
-		file.unmap(memdata);
-	}
-	file.close();
-
+	m_pImgBuff = std::move(ptr);
 	return UpdateImage();
-}
-
-bool RenderWidget::SetImageRawFile(QString filename)
-{
-	bool result = false;
-	LibRawEx lr;
-	if (lr.open_file(filename.toStdString().c_str()) == LIBRAW_SUCCESS)
-	{
-		// ==> в статус файл открыт
-
-		if (lr.unpack_thumb() == LIBRAW_SUCCESS)
-		{
-			int errcode = 0;
-			if (libraw_processed_image_t *mem_thumb = lr.dcraw_make_mem_thumb(&errcode))
-			{
-				if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
-				{
-					m_pImgBuff = std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true));
-					result = UpdateImage();
-				}
-				else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
-				{
-					// Canon EOS 1D (TIF)
-					// Kodak DCS Pro SLR/n (DCR)
-					// Kodak DC50 (KDC)
-					// Nikon D1 (NEF)
-					BmpBuff buff;
-					buff.m_buff = mem_thumb->data;
-					buff.m_width = mem_thumb->width;
-					buff.m_height = mem_thumb->height;
-					buff.m_bits = mem_thumb->bits;
-					buff.m_colors = mem_thumb->colors;
-					m_pImgBuff = std::move(GetBufFromBitmap(&buff, true));
-					result = UpdateImage();
-				}
-				else throw RawLabException(QString(tr("Unknown preview image format")).toStdString());
-				lr.dcraw_clear_mem(mem_thumb);
-			}
-			else throw RawLabException(QString(tr("Failed to create a preview image in memory: error code %1")).arg(errcode).toStdString());
-		}
-		else
-		{
-			// MINOLTA RD175 (MDC)
-			// нет превью, создать RgbBuffPtr с пустым буфером
-			m_pImgBuff = std::unique_ptr<RgbBuff>(new RgbBuff());
-			result = UpdateImage();
-		}
-	}
-	else throw RawLabException(QString(tr("Unknown RAW format")).toStdString());
-	return result;
 }
 
 bool RenderWidget::UpdateImage()
@@ -111,6 +53,9 @@ bool RenderWidget::UpdateImage()
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			setMouseTracking(true);
 		}
+		// если размер изображения меньше меньше окна, не растягивать, оставить масштаб 100%
+		if (m_pImgBuff->m_width < width() && m_pImgBuff->m_height < height())
+			m_dblZoom = 1.0;
 		result = true;
 	}
 
@@ -327,13 +272,15 @@ void RenderWidget::onZoomEvent()
 		// отрицательное смещение разрешает смещаться влево или вверх
 		// положительное или нулевое запрещает смещение
 		m_ScrollLimit.setX(
-			((w - width()) > DBL_EPSILON ? 
+			// не использовать fabs! здесь
+			((w - width()) > DBL_EPSILON ?
 				static_cast<qreal>(width()) - w : 
 				0.5*(static_cast<qreal>(width()) - w)
 			) + m_ExtraOffset
 		);
 		m_ScrollLimit.setY(
-			((h - height()) > DBL_EPSILON ? 
+			// не использовать fabs! здесь
+			((h - height()) > DBL_EPSILON ?
 				static_cast<qreal>(height()) - h : 
 				0.5*(static_cast<qreal>(height()) - h)
 			) + m_ExtraOffset

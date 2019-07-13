@@ -74,8 +74,7 @@ public:
 	RenderWidget(QWidget *parent = 0);
 	~RenderWidget();
 
-	bool SetImageJpegFile(QString filename);
-	bool SetImageRawFile(QString filename);
+	bool setRgbBuff(RgbBuffPtr ptr);
 
 signals:
 	void zoomChanged(int prc);

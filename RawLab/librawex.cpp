@@ -1,11 +1,80 @@
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+
 #include "stdafx.h"
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
 LibRawEx::LibRawEx()
 {
+	m_defaultLibrawOutputParamsPtr = std::make_unique<libraw_output_params_t>(imgdata.params);
+
 //#pragma premsg(проинициализировать exparams) 
 	// init exparams
+}
+
+// from void CLASS scale_colors()
+std::array<float, 4> LibRawEx::getAutoWB()
+{
+	std::array<float, 4> autowb = { imgdata.color.pre_mul[0], imgdata.color.pre_mul[1], imgdata.color.pre_mul[2], imgdata.color.pre_mul[3] };
+//	if (imgdata.image) тут проверить состояние
+	const unsigned int (&greybox)[4] = imgdata.params.greybox;
+	const ushort &height = imgdata.sizes.height;
+	const ushort &width = imgdata.sizes.width;
+	const ushort &iwidth = imgdata.sizes.iwidth;
+	const unsigned int &filters = imgdata.idata.filters;
+	const unsigned int &maximum = imgdata.color.maximum;
+	const ushort &shrink = libraw_internal_data.internal_output_params.shrink;
+	const unsigned int (&cblack)[4102] = imgdata.color.cblack;
+	ushort (* const (&image))[4] = imgdata.image;
+	unsigned int c;
+	int val;
+	unsigned int sum[8];
+	double dsum[8], dmin, dmax;
+	{
+		memset(dsum, 0, sizeof dsum);
+		unsigned int bottom = MIN(greybox[1] + greybox[3], height);
+		unsigned int right = MIN(greybox[0] + greybox[2], width);
+		for (unsigned int row = greybox[1]; row < bottom; row += 8)
+			for (unsigned int col = greybox[0]; col < right; col += 8)
+			{
+				memset(sum, 0, sizeof sum);
+				for (unsigned int y = row; y < row + 8 && y < bottom; y++)
+					for (unsigned int x = col; x < col + 8 && x < right; x++)
+						for (unsigned int c = 0; c < 4; c++)
+						{
+							if (filters)
+							{
+								c = fcol(y, x);
+								val = imgdata.image[((y) >> shrink) * iwidth + ((x) >> shrink)][fcol(y, x)];
+							}
+							else
+								val = imgdata.image[y * width + x][c];
+							if (val > maximum - 25)
+								goto skip_block;
+							if ((val -= cblack[c]) < 0)
+								val = 0;
+							sum[c] += val;
+							sum[c + 4]++;
+							if (filters)
+								break;
+						}
+				for (unsigned int c = 0; c < 8; c++) dsum[c] += sum[c];
+				skip_block:;
+			}
+		for (unsigned int c = 0; c < 4; c++) if (dsum[c]) autowb[c] = dsum[c + 4] / dsum[c];
+		for (dmin = DBL_MAX, dmax = c = 0; c < 4; c++)
+		{
+			if (dmin > autowb[c])
+				dmin = autowb[c];
+			if (dmax < autowb[c])
+				dmax = autowb[c];
+		}
+		if (!imgdata.params.highlight) dmax = dmin;
+		for (c = 0; c < 4; c++) autowb[c] /= float(dmax);
+
+	}
+	return autowb;
 }
 
 #include "libraw/libraw_types.h"

@@ -16,10 +16,10 @@ RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL
 	jpeg_calc_output_dimensions(&cinfo);
 	jpeg_start_decompress(&cinfo);
 	JDIMENSION ulDwAlgnRowSize = cinfo.output_width * 3;
-	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += 4 - (ulDwAlgnRowSize & 3);
+	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += SIZEOFDWORD - (ulDwAlgnRowSize & 3);
 
 	auto ptr = std::unique_ptr<RgbBuff>(new RgbBuff());
-	ptr->m_buff = new unsigned char[ulDwAlgnRowSize * cinfo.output_height];
+	ptr->m_buff = new unsigned char[static_cast<size_t>(ulDwAlgnRowSize) * static_cast<size_t>(cinfo.output_height)];
 
 	int row_stride = cinfo.output_width * cinfo.output_components;
 
@@ -42,9 +42,11 @@ RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL
 		while (cinfo.output_scanline < cinfo.output_height)
 		{
 			JDIMENSION rslr = jpeg_read_scanlines(&cinfo, buffer, 1);
-			unsigned char* lpbDst = &ptr->m_buff[(mirror? cinfo.output_height-cinfo.output_scanline : cinfo.output_scanline - 1)*ulDwAlgnRowSize];
+			unsigned char* lpbDst = &ptr->m_buff[
+				static_cast<size_t>(mirror? cinfo.output_height-cinfo.output_scanline : cinfo.output_scanline - 1)*
+				static_cast<size_t>(ulDwAlgnRowSize)];
 			unsigned char* lpbSrc = buffer[0];
-			for (unsigned int count = 0; count < cinfo.output_width; count++)
+			for (size_t count = 0; count < static_cast<size_t>(cinfo.output_width); count++)
 			{
 				*(lpbDst + count * 3 + 0) = *(lpbSrc + count * 3 + 0);
 				*(lpbDst + count * 3 + 1) = *(lpbSrc + count * 3 + 1);
@@ -59,9 +61,11 @@ RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL
 		while (cinfo.output_scanline < cinfo.output_height)
 		{
 			JDIMENSION rslr = jpeg_read_scanlines(&cinfo, buffer, 1);
-			unsigned char* lpbDst = &ptr->m_buff[(mirror ? cinfo.output_height - cinfo.output_scanline : cinfo.output_scanline - 1)*ulDwAlgnRowSize];
+			unsigned char* lpbDst = &ptr->m_buff[
+				static_cast<size_t>(mirror ? cinfo.output_height - cinfo.output_scanline : cinfo.output_scanline - 1)*
+				static_cast<size_t>(ulDwAlgnRowSize)];
 			unsigned char* lpbSrc = buffer[0];
-			for (unsigned int count = 0; count < cinfo.output_width; count++)
+			for (size_t count = 0; count < static_cast<size_t>(cinfo.output_width); count++)
 			{
 				*(lpbDst + count * 3 + 0) =
 					*(lpbDst + count * 3 + 1) =
