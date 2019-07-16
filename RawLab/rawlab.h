@@ -41,12 +41,7 @@ private:
 	std::unique_ptr<LibRawEx> m_lr;
 	std::vector<wbpreset> m_wbpresets;
 	// делитель для автоматического расчета второго зеленого канала Green2 баланса белого
-	float m_G2div;
-	// флаг, что ББ уже был обновлен/установлен в UI в ходе конвертации
-	// чтобы не обновлять ББ несколько раз
-	bool m_isWBset;
-	// сохраняется имя пресета ББ перед запуском потока, чтобы после конвертации восстановить
-	QString m_lastWBPreset;
+	float m_green2div;
 
 	CSettings m_settings;
 
@@ -76,12 +71,14 @@ private:
 	void RawProcess();
 
 	void setWBSliders(const float(&mul)[4], bool setDefault = true);
+	// обновлять WB контролы только после распаковки RAW
 	void setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb);
 	void updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb);
-	void setAutoGreen2(bool checked);
+	void setAutoGreen2(bool value);
 	void updateParamControls();
 	// по текущим значениям слайдеров ББ определить пресет
 	int getWbPreset(const QString& lastPreset = "") const;
+	void updateGreen2Div();
 signals:
 	void rawProcessed(QString message);
 	void setRun(bool default);
@@ -98,5 +95,6 @@ public slots:
 	void onWBBlueValueChanged(double value);
 	void onWBGreen2ValueChanged(double value);
 	void onAutoGreen2Clicked(bool checked);
+	void onAutoBrightnessClicked(bool checked);
 
 };

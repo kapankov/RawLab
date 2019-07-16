@@ -1,4 +1,4 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.green2
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include "stdafx.h"
@@ -28,10 +28,10 @@ int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iterati
 			rawlab->updateAutoWB(imgdata.color.pre_mul, RAWLAB::WBAUTO);
 	}
 
-	// если LIBRAW_PROGRESS_IDENTIFY значит только открыли файл
+	// если LIBRAW_PROGRESS_IDENTIFY значит уже открыли файл
 	// LIBRAW_PROGRESS_SCALE_COLORS - обработка уже распакованного файла
-	// поэтому нужен флаг, что WB уже был обновлен в UI
-	if (!rawlab->m_isWBset && stage > LIBRAW_PROGRESS_IDENTIFY)
+	// проверяем по заполненности списка пресетов (по умолчанию есть всегда пресет Custom)
+	if (rawlab->m_wbpresets.size()<2 && stage > LIBRAW_PROGRESS_IDENTIFY)
 	{
 		libraw_output_params_t &params = imgdata.params;
 		libraw_colordata_t &color = imgdata.color;
@@ -150,12 +150,12 @@ int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iterati
 		else
 			wb = RAWLAB::WBDAYLIGHT;
 
-		memset(tempwb, 0, sizeof(tempwb));
+		tempwb[0] = 0;
 		// set WB
 		switch (wb)
 		{
 		case RAWLAB::WBAUTO:
-			rawlab->setWBControls(tempwb, wb);
+			rawlab->setWBControls(safewb(tempwb), wb);
 			break;
 		case RAWLAB::WBUSER:
 			rawlab->setWBControls(params.user_mul, wb);
@@ -166,7 +166,7 @@ int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iterati
 		default:
 			rawlab->setWBControls(color.pre_mul, wb);
 		}
-		rawlab->m_isWBset = true;
+
 	}
 
 	return 0;
@@ -174,8 +174,7 @@ int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iterati
 
 RawLab::RawLab(QWidget *parent)
 	: QMainWindow(parent)
-	, m_G2div(1.)
-	, m_isWBset(false)
+	, m_green2div(1.)
 {
 	ui.setupUi(this);
 
@@ -185,6 +184,9 @@ RawLab::RawLab(QWidget *parent)
 	m_settings.setDefaultValue(QString("lastdir").toStdWString(),
 		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdWString());
 	m_lastDir = QString::fromStdWString(m_settings.getValue(QString("lastdir").toStdWString()));
+	m_settings.setDefaultValue(QString("autogreen2").toStdWString(),
+		QString("true").toStdWString());
+
 /*	m_settings.setDefaultValue(QString("minfilter").toStdWString(), 
 		QString("LINEAR").toStdWString());
 	m_settings.setDefaultValue(QString("magfilter").toStdWString(), 
@@ -240,9 +242,11 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderWBGreen2->setDefaultValue(1.0);
 	ui.sliderWBGreen2->setValue(1.0);
 
+	ui.AutoGreen2->setChecked(m_settings.getValue(QString("autogreen2").toStdWString()).compare(QString("true").toStdWString()) == 0);
+
 	ui.sliderExposure->setLabel(tr("Exposure:"));
 	ui.sliderExposure->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
-	ui.sliderExposure->setRange(10.0, -10.0, DECIMAL2);
+	ui.sliderExposure->setRange(3.0, -2.0, DECIMAL2);
 	ui.sliderExposure->setDefaultValue(0.0);
 	ui.sliderExposure->setValue(0.0);
 
@@ -313,12 +317,18 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 
 	connect(ui.cmbWhiteBalance, QOverload<int>::of(&QComboBox::activated),
-		[=](size_t index) { if (index>0) setWBSliders(m_wbpresets[index-1].wb, false); });
+		[=](size_t index)
+		{
+			if (index>0) setWBSliders(m_wbpresets[index-1].wb, false);
+			if (ui.AutoGreen2->isChecked()) updateGreen2Div();
+		}
+	);
 	connect(ui.sliderWBRed, SIGNAL(valueChanged(double)), this, SLOT(onWBRedValueChanged(double)));
 	connect(ui.sliderWBGreen, SIGNAL(valueChanged(double)), this, SLOT(onWBGreenValueChanged(double)));
 	connect(ui.sliderWBBlue, SIGNAL(valueChanged(double)), this, SLOT(onWBBlueValueChanged(double)));
 	connect(ui.sliderWBGreen2, SIGNAL(valueChanged(double)), this, SLOT(onWBGreen2ValueChanged(double)));
 	connect(ui.AutoGreen2, SIGNAL(clicked(bool)), this, SLOT(onAutoGreen2Clicked(bool)));
+	connect(ui.AutoBrightness, SIGNAL(clicked(bool)), this, SLOT(onAutoBrightnessClicked(bool)));
 }
 
 RawLab::~RawLab()
@@ -429,7 +439,6 @@ void RawLab::RawProcess()
 		// вычислить время конвертации
 		auto start = std::chrono::high_resolution_clock::now();
 
-		m_isWBset = false;
 		m_lr->set_progress_handler(RAW_progress_cb, this);
 
 		libraw_data_t& imgdata = m_lr->imgdata;
@@ -496,19 +505,6 @@ void RawLab::RawProcess()
 
 void RawLab::setWBSliders(const float(&mul)[4], bool setDefault)
 {
-	// set G2 divider before set WB
-	if (mul[3] && mul[1] && fabs(mul[3]- mul[1])>FLT_EPSILON)
-	{
-		m_G2div = mul[3] / (fabs(mul[1]) > FLT_EPSILON ? mul[1] : mul[3]);
-		// uncheck Auto Green2;
-		setAutoGreen2(false);
-	}
-	else
-	{
-		m_G2div = 1.0f;
-		// check Auto Green2
-		setAutoGreen2(true);
-	}
 	auto safewbmul = [](const float(&mul)[4], size_t n) -> float
 	{
 		if (fabs(mul[1]) < FLT_EPSILON) return 1.0f;
@@ -526,7 +522,6 @@ void RawLab::setWBSliders(const float(&mul)[4], bool setDefault)
 	ui.sliderWBBlue->update();
 	ui.sliderWBGreen2->setValue(safewbmul(mul, 3));
 	if (setDefault) ui.sliderWBGreen2->setDefaultValue(safewbmul(mul, 3));
-
 	ui.sliderWBGreen2->update();
 }
 
@@ -538,7 +533,12 @@ void RawLab::setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb)
 	ui.cmbWhiteBalance->addItem(tr("Custom"));
 	for (auto x : m_wbpresets)
 		ui.cmbWhiteBalance->addItem(x.name);
-	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset(m_lastWBPreset));
+	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset(/*m_lastWBPreset*/));
+
+	bool  defAutoGreen2 = m_settings.getValue(QString("autogreen2").toStdWString()).compare(QString("true").toStdWString()) == 0;
+	if (defAutoGreen2)
+		updateGreen2Div();
+	setAutoGreen2(defAutoGreen2);
 }
 
 void RawLab::updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb)
@@ -548,12 +548,14 @@ void RawLab::updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb)
 	{
 		setWBSliders(mul);
 		ui.cmbWhiteBalance->setCurrentIndex(1);
+		if (ui.AutoGreen2->isChecked())
+			updateGreen2Div();
 	}
 }
 
-void RawLab::setAutoGreen2(bool checked)
+void RawLab::setAutoGreen2(bool value)
 {
-	ui.AutoGreen2->setChecked(checked);
+	ui.AutoGreen2->setChecked(value);
 }
 
 void RawLab::updateParamControls()
@@ -591,6 +593,13 @@ int RawLab::getWbPreset(const QString& lastPreset) const
 		}
 	}
 	return result;
+}
+
+void RawLab::updateGreen2Div()
+{
+	m_green2div = fabs(ui.sliderWBGreen->getValue()) > DBL_EPSILON ?
+		ui.sliderWBGreen2->getValue() / ui.sliderWBGreen->getValue() :
+		1.0f;
 }
 
 void RawLab::openFile(const QString& filename)
@@ -722,7 +731,7 @@ void RawLab::onWBGreenValueChanged(double value)
 {
 	if (ui.AutoGreen2->isChecked() &&
 		ui.sliderWBGreen2->getValue() > DBL_EPSILON)
-		ui.sliderWBGreen2->setValue(value*m_G2div, true);
+		ui.sliderWBGreen2->setValue(value*m_green2div, true);
 	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
 }
 
@@ -742,7 +751,12 @@ void RawLab::onAutoGreen2Clicked(bool checked)
 	{
 		// если выбран Custom установить 0
 		if (ui.cmbWhiteBalance->currentIndex() == 0)
-			ui.sliderWBGreen2->setValue(0.0);
+		{
+			if (fabs(ui.sliderWBGreen2->getValue() - ui.sliderWBGreen->getValue()) < DBL_EPSILON)
+				ui.sliderWBGreen2->setValue(0.0);
+			else
+				updateGreen2Div();
+		}
 		else // если выбран пресет установить множитель из пресета
 			ui.sliderWBGreen2->setValue(m_wbpresets[ui.cmbWhiteBalance->currentIndex()-1].wb[3]);
 		ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
@@ -755,6 +769,14 @@ void RawLab::onAutoGreen2Clicked(bool checked)
 			ui.sliderWBGreen2->setValue(ui.sliderWBGreen->getValue());
 		ui.sliderWBGreen2->setEnabled(true);
 	}
+}
+
+void RawLab::onAutoBrightnessClicked(bool checked)
+{
+	bool enable = ui.AutoBrightness->checkState() == Qt::Unchecked;
+	ui.sliderBrightness->setEnabled(enable);
+	if (!enable)
+		ui.sliderBrightness->setValue(1.0);
 }
 
 bool RawLab::isCancel()
@@ -1037,11 +1059,23 @@ void RawLab::onRun()
 					mul[0] = ui.sliderWBRed->getValue();
 					mul[1] = ui.sliderWBGreen->getValue();
 					mul[2] = ui.sliderWBBlue->getValue();
-					mul[3] = ui.AutoGreen2->isChecked() ? 0.0f : ui.sliderWBGreen2->getValue();
+					mul[3] = ui.sliderWBGreen2->getValue();
 				}
-				m_lastWBPreset = ui.cmbWhiteBalance->currentText();
+				params.exp_correc = 0;
+				params.exp_shift = 1.0f;
+				params.exp_preser = 0.0f;
+				if (fabs(ui.sliderExposure->getValue() - 1.0) > DBL_EPSILON)
+				{
+					params.exp_correc = 1;
+					params.exp_shift = static_cast<float>(std::pow(2, ui.sliderExposure->getValue()));
+				}
+				if (ui.sliderPreserveHighlights->getValue() > DBL_EPSILON)
+				{
+					params.exp_correc = 1;
+					params.exp_preser = static_cast<float>(ui.sliderPreserveHighlights->getValue());
+				}
 			}
-			else m_lastWBPreset.clear();
+			else m_wbpresets.clear();
 		}
 		m_threadProcess = std::thread(&RawLab::RawProcess, this);
 	}

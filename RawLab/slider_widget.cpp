@@ -280,7 +280,9 @@ QRect SliderWidget::getEditorRect() const
 
 void SliderWidget::setValue(double value, bool update)
 {
-	m_value = value;
+	if (value > m_top) m_value = m_top;
+	else if (value < m_bottom) m_value = m_bottom;
+	else m_value = value;
 	if (update) this->update();
 }
 
