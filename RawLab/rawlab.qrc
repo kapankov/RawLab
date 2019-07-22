@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="images">
+    <file>Resources/save.png</file>
     <file>Resources/play.png</file>
     <file>Resources/stop.png</file>
     <file>Resources/chkbox_checked.png</file>

@@ -33,140 +33,7 @@ int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iterati
 	// проверяем по заполненности списка пресетов (по умолчанию есть всегда пресет Custom)
 	if (rawlab->m_wbpresets.size()<2 && stage > LIBRAW_PROGRESS_IDENTIFY)
 	{
-		libraw_output_params_t &params = imgdata.params;
-		libraw_colordata_t &color = imgdata.color;
-		float tempwb[4] = { 1.0f,1.0f,1.0f,1.0f };
-		auto safewb = [&tempwb](const float(&mul)[4]) -> float(&)[4]
-		{
-			tempwb[0] = 1.0f;
-			tempwb[1] = 1.0f;
-			tempwb[2] = 1.0f;
-			tempwb[3] = 1.0f;
-			if (fabs(mul[1]) < FLT_EPSILON) return tempwb;
-			if ((mul[1] - 16.0f) > FLT_EPSILON)
-			{
-				tempwb[0] = mul[0] / mul[1];
-				tempwb[1] = 1.0f;
-				tempwb[2] = mul[2] / mul[1];
-				tempwb[3] = mul[3] / mul[1];
-			}
-			else
-			{
-				tempwb[0] = mul[0];
-				tempwb[1] = mul[1];
-				tempwb[2] = mul[2];
-				tempwb[3] = mul[3];
-			}
-			return tempwb;
-		};
-
-		rawlab->m_wbpresets.clear();
-
-		// заполнить пресеты баланса белого
-		rawlab->m_wbpresets.emplace_back(QString("LibRaw Auto"), tempwb); // обязательно первым, т.к. tempwb заполнен 1.0f
-		rawlab->m_wbpresets.emplace_back(QString("LibRaw Daylight"), safewb(color.pre_mul));
-		rawlab->m_wbpresets.emplace_back(QString("As Shot"), safewb(color.cam_mul));
-		// lightsources
-		for (size_t i = 0, count = sizeof(color.WB_Coeffs) / sizeof(color.WB_Coeffs[0]); i < count; ++i)
-		{
-			if (color.WB_Coeffs[i][0] || color.WB_Coeffs[i][1] || color.WB_Coeffs[i][2] || color.WB_Coeffs[i][3])
-			{
-				switch (i)
-				{
-				case LIBRAW_WBI_Daylight: rawlab->m_wbpresets.emplace_back(QString("Daylight"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Fluorescent: rawlab->m_wbpresets.emplace_back(QString("Fluorescent"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Tungsten: rawlab->m_wbpresets.emplace_back(QString("Tungsten"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Flash: rawlab->m_wbpresets.emplace_back(QString("Flash"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_FineWeather: rawlab->m_wbpresets.emplace_back(QString("Fine Weather"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Cloudy: rawlab->m_wbpresets.emplace_back(QString("Cloudy Weather"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Shade: rawlab->m_wbpresets.emplace_back(QString("Shade"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_FL_D: rawlab->m_wbpresets.emplace_back(QString("Daylight Fluorescent"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_FL_N:  rawlab->m_wbpresets.emplace_back(QString("Day White Fluorescent"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_FL_W: rawlab->m_wbpresets.emplace_back(QString("Cool White Fluorescent"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_FL_WW: rawlab->m_wbpresets.emplace_back(QString("White Fluorescent"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_FL_L: rawlab->m_wbpresets.emplace_back(QString("Warm White Fluorescent"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Ill_A: rawlab->m_wbpresets.emplace_back(QString("Standard Light A"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Ill_B: rawlab->m_wbpresets.emplace_back(QString("Standard Light B"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Ill_C: rawlab->m_wbpresets.emplace_back(QString("Standard Light C"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_D55: rawlab->m_wbpresets.emplace_back(QString("D55"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_D65: rawlab->m_wbpresets.emplace_back(QString("D65"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_D75: rawlab->m_wbpresets.emplace_back(QString("D75"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_D50: rawlab->m_wbpresets.emplace_back(QString("D50"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_StudioTungsten: rawlab->m_wbpresets.emplace_back(QString("ISO Studio Tungsten"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Sunset: rawlab->m_wbpresets.emplace_back(QString("Sunset"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Auto: rawlab->m_wbpresets.emplace_back(QString("Camera Auto"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom: rawlab->m_wbpresets.emplace_back(QString("Custom"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Auto1: rawlab->m_wbpresets.emplace_back(QString("Camera Auto 1"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Auto2: rawlab->m_wbpresets.emplace_back(QString("Camera Auto 2"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Auto3: rawlab->m_wbpresets.emplace_back(QString("Camera Auto 3"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Auto4: rawlab->m_wbpresets.emplace_back(QString("Camera Auto 4"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom1: rawlab->m_wbpresets.emplace_back(QString("Custom 1"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom2: rawlab->m_wbpresets.emplace_back(QString("Custom 2"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom3: rawlab->m_wbpresets.emplace_back(QString("Custom 3"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom4: rawlab->m_wbpresets.emplace_back(QString("Custom 4"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom5: rawlab->m_wbpresets.emplace_back(QString("Custom 5"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Custom6: rawlab->m_wbpresets.emplace_back(QString("Custom 6"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Measured: rawlab->m_wbpresets.emplace_back(QString("Camera Measured"), color.WB_Coeffs[i]); break;
-				case LIBRAW_WBI_Underwater: rawlab->m_wbpresets.emplace_back(QString("Underwater"), color.WB_Coeffs[i]); break;
-				default: rawlab->m_wbpresets.emplace_back(QString("lightsource %1").arg(i), color.WB_Coeffs[i]);
-				}
-			}
-				
-		}
-
-		// CT WB
-		// предварительно отсортировать пресеты из color.WBCT_Coeffs по температуре
-		constexpr size_t WBCT_Coeffs_count = sizeof(color.WBCT_Coeffs) / sizeof(color.WBCT_Coeffs[0]);
-		constexpr size_t WBCT_Coeffs_size = sizeof(color.WBCT_Coeffs[0]) / sizeof(color.WBCT_Coeffs[0][0]);
-		std::array<std::array<float, WBCT_Coeffs_size>, WBCT_Coeffs_count> WBCT_Coeffs;
-		for (size_t n=0;n<WBCT_Coeffs_count;++n)
-			std::copy(std::begin(color.WBCT_Coeffs[n]), std::end(color.WBCT_Coeffs[n]), std::begin(WBCT_Coeffs[n]));
-		
-		std::sort(WBCT_Coeffs.begin(), WBCT_Coeffs.end(),
-			[](const std::array<float, WBCT_Coeffs_size>& a, const std::array<float, WBCT_Coeffs_size>& b) -> bool { return a[0]<b[0]; });
-
-		size_t preset_count = rawlab->m_wbpresets.size();
-		for (size_t i = 0; i < WBCT_Coeffs_count; ++i)
-		{
-			if (WBCT_Coeffs[i][0] > FLT_EPSILON)
-			{
-				float t[4] = { WBCT_Coeffs[i][1], WBCT_Coeffs[i][2], WBCT_Coeffs[i][3], WBCT_Coeffs[i][4] };
-				rawlab->m_wbpresets.emplace_back(QString("CT %1 K").arg(WBCT_Coeffs[i][0]), t);
-			}
-		}
-
-		RAWLAB::WBSTATE wb = RAWLAB::WBUNKNOWN;
-		// если использован пользовательский WB
-		float(&mul)[4] = params.user_mul;
-		if (mul[0] || mul[1] || mul[2] || mul[3])
-			wb = RAWLAB::WBUSER;
-		// если авто (расчитывается в LibRaw)
-		else if (params.use_auto_wb)
-			wb = RAWLAB::WBAUTO;
-		// если нужен WB камеры (AsShot)
-		else if (params.use_camera_wb)
-			wb = RAWLAB::WBASSHOT;
-		// либо баланс белого для дневного света
-		else
-			wb = RAWLAB::WBDAYLIGHT;
-
-		tempwb[0] = 0;
-		// set WB
-		switch (wb)
-		{
-		case RAWLAB::WBAUTO:
-			rawlab->setWBControls(safewb(tempwb), wb);
-			break;
-		case RAWLAB::WBUSER:
-			rawlab->setWBControls(params.user_mul, wb);
-			break;
-		case RAWLAB::WBASSHOT:
-			rawlab->setWBControls(color.cam_mul, wb);
-			break;
-		default:
-			rawlab->setWBControls(color.pre_mul, wb);
-		}
-
+		rawlab->updateParamControls();
 	}
 
 	return 0;
@@ -186,6 +53,8 @@ RawLab::RawLab(QWidget *parent)
 	m_lastDir = QString::fromStdWString(m_settings.getValue(QString("lastdir").toStdWString()));
 	m_settings.setDefaultValue(QString("autogreen2").toStdWString(),
 		QString("true").toStdWString());
+	m_settings.setDefaultValue(QString("tiff").toStdWString(),
+		QString("false").toStdWString());
 
 /*	m_settings.setDefaultValue(QString("minfilter").toStdWString(), 
 		QString("LINEAR").toStdWString());
@@ -296,6 +165,8 @@ RawLab::RawLab(QWidget *parent)
 			Qt::QueuedConnection);
 	connect(ui.action_Exit, SIGNAL(triggered()), this, SLOT(onExit()));
 	connect(ui.action_Open, SIGNAL(triggered()), this, SLOT(onOpen()));
+	connect(ui.action_Save, SIGNAL(triggered()), this, SLOT(onSave()));
+
 	connect(ui.action_Run, SIGNAL(triggered()), this, SLOT(onRun()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
 	connect(ui.actionZoom_Out, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomOut()));
@@ -560,9 +431,150 @@ void RawLab::setAutoGreen2(bool value)
 
 void RawLab::updateParamControls()
 {
-//	setWBControls(m_lr->imgdata.color.pre_mul);
+	libraw_data_t& imgdata = m_lr->imgdata;
+	libraw_output_params_t &params = imgdata.params;
+	libraw_colordata_t &color = imgdata.color;
+	float tempwb[4] = { 1.0f,1.0f,1.0f,1.0f };
+	auto safewb = [&tempwb](const float(&mul)[4]) -> float(&)[4]
+	{
+		tempwb[0] = 1.0f;
+		tempwb[1] = 1.0f;
+		tempwb[2] = 1.0f;
+		tempwb[3] = 1.0f;
+		if (fabs(mul[1]) < FLT_EPSILON) return tempwb;
+		if ((mul[1] - 16.0f) > FLT_EPSILON)
+		{
+			tempwb[0] = mul[0] / mul[1];
+			tempwb[1] = 1.0f;
+			tempwb[2] = mul[2] / mul[1];
+			tempwb[3] = mul[3] / mul[1];
+		}
+		else
+		{
+			tempwb[0] = mul[0];
+			tempwb[1] = mul[1];
+			tempwb[2] = mul[2];
+			tempwb[3] = mul[3];
+		}
+		return tempwb;
+	};
 
+	m_wbpresets.clear();
 
+	// заполнить пресеты баланса белого
+	m_wbpresets.emplace_back(QString("LibRaw Auto"), tempwb); // обязательно первым, т.к. tempwb заполнен 1.0f
+	m_wbpresets.emplace_back(QString("LibRaw Daylight"), safewb(color.pre_mul));
+	m_wbpresets.emplace_back(QString("As Shot"), safewb(color.cam_mul));
+	// lightsources
+	for (size_t i = 0, count = sizeof(color.WB_Coeffs) / sizeof(color.WB_Coeffs[0]); i < count; ++i)
+	{
+		if (color.WB_Coeffs[i][0] || color.WB_Coeffs[i][1] || color.WB_Coeffs[i][2] || color.WB_Coeffs[i][3])
+		{
+			switch (i)
+			{
+			case LIBRAW_WBI_Daylight: m_wbpresets.emplace_back(QString("Daylight"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Fluorescent: m_wbpresets.emplace_back(QString("Fluorescent"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Tungsten: m_wbpresets.emplace_back(QString("Tungsten"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Flash: m_wbpresets.emplace_back(QString("Flash"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_FineWeather: m_wbpresets.emplace_back(QString("Fine Weather"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Cloudy: m_wbpresets.emplace_back(QString("Cloudy Weather"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Shade: m_wbpresets.emplace_back(QString("Shade"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_FL_D: m_wbpresets.emplace_back(QString("Daylight Fluorescent"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_FL_N:  m_wbpresets.emplace_back(QString("Day White Fluorescent"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_FL_W: m_wbpresets.emplace_back(QString("Cool White Fluorescent"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_FL_WW: m_wbpresets.emplace_back(QString("White Fluorescent"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_FL_L: m_wbpresets.emplace_back(QString("Warm White Fluorescent"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Ill_A: m_wbpresets.emplace_back(QString("Standard Light A"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Ill_B: m_wbpresets.emplace_back(QString("Standard Light B"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Ill_C: m_wbpresets.emplace_back(QString("Standard Light C"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_D55: m_wbpresets.emplace_back(QString("D55"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_D65: m_wbpresets.emplace_back(QString("D65"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_D75: m_wbpresets.emplace_back(QString("D75"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_D50: m_wbpresets.emplace_back(QString("D50"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_StudioTungsten: m_wbpresets.emplace_back(QString("ISO Studio Tungsten"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Sunset: m_wbpresets.emplace_back(QString("Sunset"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Auto: m_wbpresets.emplace_back(QString("Camera Auto"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom: m_wbpresets.emplace_back(QString("Custom"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Auto1: m_wbpresets.emplace_back(QString("Camera Auto 1"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Auto2: m_wbpresets.emplace_back(QString("Camera Auto 2"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Auto3: m_wbpresets.emplace_back(QString("Camera Auto 3"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Auto4: m_wbpresets.emplace_back(QString("Camera Auto 4"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom1: m_wbpresets.emplace_back(QString("Custom 1"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom2: m_wbpresets.emplace_back(QString("Custom 2"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom3: m_wbpresets.emplace_back(QString("Custom 3"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom4: m_wbpresets.emplace_back(QString("Custom 4"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom5: m_wbpresets.emplace_back(QString("Custom 5"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Custom6: m_wbpresets.emplace_back(QString("Custom 6"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Measured: m_wbpresets.emplace_back(QString("Camera Measured"), color.WB_Coeffs[i]); break;
+			case LIBRAW_WBI_Underwater: m_wbpresets.emplace_back(QString("Underwater"), color.WB_Coeffs[i]); break;
+			default: m_wbpresets.emplace_back(QString("lightsource %1").arg(i), color.WB_Coeffs[i]);
+			}
+		}
+
+	}
+
+	// CT WB
+	// предварительно отсортировать пресеты из color.WBCT_Coeffs по температуре
+	constexpr size_t WBCT_Coeffs_count = sizeof(color.WBCT_Coeffs) / sizeof(color.WBCT_Coeffs[0]);
+	constexpr size_t WBCT_Coeffs_size = sizeof(color.WBCT_Coeffs[0]) / sizeof(color.WBCT_Coeffs[0][0]);
+	std::array<std::array<float, WBCT_Coeffs_size>, WBCT_Coeffs_count> WBCT_Coeffs;
+	for (size_t n = 0; n < WBCT_Coeffs_count; ++n)
+		std::copy(std::begin(color.WBCT_Coeffs[n]), std::end(color.WBCT_Coeffs[n]), std::begin(WBCT_Coeffs[n]));
+
+	std::sort(WBCT_Coeffs.begin(), WBCT_Coeffs.end(),
+		[](const std::array<float, WBCT_Coeffs_size>& a, const std::array<float, WBCT_Coeffs_size>& b) -> bool { return a[0] < b[0]; });
+
+	size_t preset_count = m_wbpresets.size();
+	for (size_t i = 0; i < WBCT_Coeffs_count; ++i)
+	{
+		if (WBCT_Coeffs[i][0] > FLT_EPSILON)
+		{
+			float t[4] = { WBCT_Coeffs[i][1], WBCT_Coeffs[i][2], WBCT_Coeffs[i][3], WBCT_Coeffs[i][4] };
+			m_wbpresets.emplace_back(QString("CT %1 K").arg(WBCT_Coeffs[i][0]), t);
+		}
+	}
+
+	RAWLAB::WBSTATE wb = RAWLAB::WBUNKNOWN;
+	// если использован пользовательский WB
+	float(&mul)[4] = params.user_mul;
+	if (mul[0] || mul[1] || mul[2] || mul[3])
+		wb = RAWLAB::WBUSER;
+	// если авто (расчитывается в LibRaw)
+	else if (params.use_auto_wb)
+		wb = RAWLAB::WBAUTO;
+	// если нужен WB камеры (AsShot)
+	else if (params.use_camera_wb)
+		wb = RAWLAB::WBASSHOT;
+	// либо баланс белого для дневного света
+	else
+		wb = RAWLAB::WBDAYLIGHT;
+
+	tempwb[0] = 0;
+	// set WB
+	switch (wb)
+	{
+	case RAWLAB::WBAUTO:
+		setWBControls(safewb(tempwb), wb);
+		break;
+	case RAWLAB::WBUSER:
+		setWBControls(params.user_mul, wb);
+		break;
+	case RAWLAB::WBASSHOT:
+		setWBControls(color.cam_mul, wb);
+		break;
+	default:
+		setWBControls(color.pre_mul, wb);
+	}
+
+	ui.AutoBrightness->setChecked(params.no_auto_bright == 0);
+	ui.sliderBrightness->setDefaultValue(params.bright);
+	ui.sliderBrightness->setValue(params.bright, true);
+	ui.sliderBrightness->setEnabled(params.no_auto_bright == 1);
+	ui.sliderClippedPixels->setDefaultValue(params.auto_bright_thr);
+	ui.sliderClippedPixels->setValue(params.auto_bright_thr, true);
+	ui.sliderClippedPixels->setEnabled(params.no_auto_bright == 0);
+
+	ui.cmbHighlightMode->setCurrentIndex(params.highlight < ui.cmbHighlightMode->count()? params.highlight : ui.cmbHighlightMode->count()-1);
 
 }
 
@@ -775,6 +787,7 @@ void RawLab::onAutoBrightnessClicked(bool checked)
 {
 	bool enable = ui.AutoBrightness->checkState() == Qt::Unchecked;
 	ui.sliderBrightness->setEnabled(enable);
+	ui.sliderClippedPixels->setEnabled(!enable);
 	if (!enable)
 		ui.sliderBrightness->setValue(1.0);
 }
@@ -1015,6 +1028,33 @@ void RawLab::fillProperties(const LibRawEx & lr)
 
 }
 
+void RawLab::onSave()
+{
+	bool istiff = m_lr->imgdata.params.output_tiff == 1;
+	if (m_lr->imgdata.progress_flags & LIBRAW_PROGRESS_CONVERT_RGB)
+	{
+		QString tmpfilename;
+		QString ext = QFileInfo(m_filename).suffix();
+		if (!ext.isEmpty())
+		{
+			QRegularExpression re(ext + "$");
+			tmpfilename = m_filename.replace(re, istiff ? QString("tiff") : QString("ppm"));
+		}
+		else tmpfilename = m_filename + (istiff ? QString(".tiff") : QString(".ppm"));
+		QString fileName = QFileDialog::getSaveFileName(this,
+			tr("Save processed file..."),
+			tmpfilename,
+			istiff ? tr("Tiff files (*.tiff)") : tr("PPM/PGM files (*.ppm *.pgm)"));
+		if (!fileName.isEmpty())
+		{
+			int result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			if (result != LIBRAW_SUCCESS)
+				QMessageBox::critical(this, tr("RawLab error"),
+					QString(m_lr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
+		}
+	}
+}
+
 void RawLab::onExit()
 {
 	QApplication::quit();
@@ -1029,6 +1069,8 @@ void RawLab::onRun()
 		// взять параметры из UI
 		{
 			libraw_output_params_t &params = m_lr->imgdata.params;
+			// tiff or ppm/pgm output format
+			params.output_tiff = m_settings.getValue(QString("tiff").toStdWString()).compare(QString("true").toStdWString()) == 0 ? 1 : 0;
 			// баланс белого
 			float(&mul)[4] = params.user_mul;
 			mul[0] = 0.0;
@@ -1061,21 +1103,39 @@ void RawLab::onRun()
 					mul[2] = ui.sliderWBBlue->getValue();
 					mul[3] = ui.sliderWBGreen2->getValue();
 				}
-				params.exp_correc = 0;
-				params.exp_shift = 1.0f;
-				params.exp_preser = 0.0f;
-				if (fabs(ui.sliderExposure->getValue() - 1.0) > DBL_EPSILON)
-				{
-					params.exp_correc = 1;
-					params.exp_shift = static_cast<float>(std::pow(2, ui.sliderExposure->getValue()));
-				}
-				if (ui.sliderPreserveHighlights->getValue() > DBL_EPSILON)
-				{
-					params.exp_correc = 1;
-					params.exp_preser = static_cast<float>(ui.sliderPreserveHighlights->getValue());
-				}
 			}
 			else m_wbpresets.clear();
+			// Exposure
+			params.exp_correc = 0;
+			params.exp_shift = 1.0f;
+			params.exp_preser = 0.0f;
+			if (fabs(ui.sliderExposure->getValue() - 1.0) > DBL_EPSILON)
+			{
+				params.exp_correc = 1;
+				params.exp_shift = static_cast<float>(std::pow(2, ui.sliderExposure->getValue()));
+			}
+			if (ui.sliderPreserveHighlights->getValue() > DBL_EPSILON)
+			{
+				params.exp_correc = 1;
+				params.exp_preser = static_cast<float>(ui.sliderPreserveHighlights->getValue());
+			}
+			// Brightness
+			if (ui.AutoBrightness->isChecked())
+			{
+				// Auto brigtness
+				params.no_auto_bright = 0;
+				params.bright = 1.0f;
+				params.auto_bright_thr = ui.sliderClippedPixels->getValue();
+			}
+			else
+			{
+				// Manual brightness
+				params.no_auto_bright = 1;
+				params.bright = ui.sliderBrightness->getValue();
+				params.auto_bright_thr = 0.0f;
+			}
+			// Highlights
+			params.highlight = ui.cmbHighlightMode->currentIndex();
 		}
 		m_threadProcess = std::thread(&RawLab::RawProcess, this);
 	}

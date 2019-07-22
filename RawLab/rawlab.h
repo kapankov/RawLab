@@ -84,6 +84,7 @@ signals:
 	void setRun(bool default);
 public slots:
 	void onOpen();
+	void onSave();
 	void onExit();
 	void onRun();
 	void onAbout();
