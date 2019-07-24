@@ -137,17 +137,71 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderClippedPixels->setDefaultValue(0.001);
 	ui.sliderClippedPixels->setValue(0.001);
 
-	ui.cmbHighlightMode->addItem(tr("0 - Clip"));
-	ui.cmbHighlightMode->addItem(tr("1 - Unclip"));
-	ui.cmbHighlightMode->addItem(tr("2 - Blend"));
-	ui.cmbHighlightMode->addItem(tr("3 - Rebuild"));
-	ui.cmbHighlightMode->addItem(tr("4 - Rebuild"));
-	ui.cmbHighlightMode->addItem(tr("5 - Rebuild"));
-	ui.cmbHighlightMode->addItem(tr("6 - Rebuild"));
-	ui.cmbHighlightMode->addItem(tr("7 - Rebuild"));
-	ui.cmbHighlightMode->addItem(tr("8 - Rebuild"));
-	ui.cmbHighlightMode->addItem(tr("9 - Rebuild"));
+	QString highlightModes[] = {
+		"0 - Clip",
+		"1 - Unclip",
+		"2 - Blend",
+		"3 - Rebuild",
+		"4 - Rebuild",
+		"5 - Rebuild",
+		"6 - Rebuild",
+		"7 - Rebuild",
+		"8 - Rebuild",
+		"9 - Rebuild"
+	};
+	for (auto item : highlightModes)
+		ui.cmbHighlightMode->addItem(item);
 	ui.cmbHighlightMode->setCurrentIndex(0);
+
+	QString gammaCurves[] = { 
+		"BT.709 (REC.709)", 
+		"sRGB", 
+		"L* (L-star)", 
+		"Linear Curve", 
+		"1.8 (ProPhoto, Apple, ColorMatch)", 
+		"2.2 (Adobe, WideGamut, CIE)"
+	};
+	for (auto item: gammaCurves)
+		ui.cmbGammaCurve->addItem(item);
+	ui.cmbGammaCurve->addItem("Custom");
+	ui.cmbGammaCurve->setCurrentIndex(0);
+
+	ui.sliderGamma->setLabel(tr("Gamma:"));
+	ui.sliderGamma->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderGamma->setRange(100.0, 0.0, DECIMAL2);
+	ui.sliderGamma->setDefaultValue(2.222);
+	ui.sliderGamma->setValue(2.222);
+
+	ui.sliderSlope->setLabel(tr("Slope:"));
+	ui.sliderSlope->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderSlope->setRange(100.0, 0.0, DECIMAL4);
+	ui.sliderSlope->setDefaultValue(4.5);
+	ui.sliderSlope->setValue(4.5);
+
+	QString outputProfiles[] = {
+		"Camera RAW",
+		"sRGB",
+		"Adobe RGB (1998)",
+		"WideGamut D65",
+		"ProPhoto D65",
+		"XYZ",
+		"ACES"
+	};
+	for (auto item : outputProfiles)
+		ui.cmbOutProfile->addItem(item);
+	ui.cmbOutProfile->setCurrentIndex(1);
+
+	ui.cmbCameraProfile->addItem("None");
+	ui.cmbCameraProfile->setCurrentIndex(0);
+
+	QString cameraMatrix[] = {
+		"Libraw matrix",
+		"Embeded (DNG or for AsShot WB)",
+		"Embedded (always, if present)"
+	};
+	for (auto item : cameraMatrix)
+		ui.cmbCameraMatrix->addItem(item);
+	ui.cmbCameraMatrix->setCurrentIndex(1);
 
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));

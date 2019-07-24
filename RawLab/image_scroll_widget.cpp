@@ -6,6 +6,8 @@
 
 ImageScrollWidget::ImageScrollWidget(QWidget* parent)
 	: QAbstractScrollArea(parent)
+	, m_lastContentSize(0,0)
+	, m_lastViewportSize(0,0)
 	, m_ignoreScrollContents(false)
 {
 	
@@ -22,8 +24,13 @@ void ImageScrollWidget::onScrollOffsetChanged(int xOffset, int yOffset)
 */
 void ImageScrollWidget::onScrollSizeChanged(int x, int y)
 {
-	m_ignoreScrollContents = true;
 	QSize areaSize = viewport()->size();
+	// проверим на реальные изменения (чтобы не создавать stack overflow)
+	if (m_lastContentSize.width() == x && m_lastContentSize.height() == y && areaSize == m_lastViewportSize) return;
+	m_lastContentSize.setWidth(x);
+	m_lastContentSize.setHeight(y);
+
+	m_ignoreScrollContents = true;
 	if (x > areaSize.width())
 	{
 		if (horizontalScrollBarPolicy() != Qt::ScrollBarAlwaysOn)
@@ -58,6 +65,7 @@ void ImageScrollWidget::onScrollSizeChanged(int x, int y)
 	}
 	//	viewport()->update();
 	m_ignoreScrollContents = false;
+	m_lastViewportSize = viewport()->size();
 }
 
 void ImageScrollWidget::scrollContentsBy(int dx, int dy)

@@ -7,6 +7,9 @@
 class ImageScrollWidget : public QAbstractScrollArea
 {
 	Q_OBJECT
+	QSize m_lastContentSize;
+	QSize m_lastViewportSize;
+
 	bool m_ignoreScrollContents;
 public:
 	explicit ImageScrollWidget(QWidget* parent = 0);

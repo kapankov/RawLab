@@ -93,8 +93,8 @@ void RenderWidget::paintGL()
 
 	QRectF rctImg(0,	// left
 		0,	// top
-		static_cast<qreal>(m_pImgBuff->m_width),	// width
-		static_cast<qreal>(m_pImgBuff->m_height));	// height
+		static_cast<qreal>(m_pImgBuff->m_width-1),	// width
+		static_cast<qreal>(m_pImgBuff->m_height-1));	// height
 
 	GLdouble dblZoom = getZoom(width(), height());
 
@@ -109,19 +109,20 @@ void RenderWidget::paintGL()
 	glPushMatrix();
 
 	if (m_ScrollOffset.x() || m_ScrollOffset.y()) 
-		glTranslated(m_ScrollOffset.x(), m_ScrollOffset.y(), 0.0);
+		glTranslated(m_ScrollOffset.x(), m_ScrollOffset.y(), 0);
 
-	if (fabs(dblZoom - 1.0) > DBL_EPSILON) glScaled(dblZoom, dblZoom, 1.0);
+	if (fabs(dblZoom - 1.0) > DBL_EPSILON) 
+		glScaled(dblZoom, dblZoom, 1.0);
 
 	glBegin(GL_QUADS);
 		glTexCoord2d(0, 0);	// bottom-left
-		glVertex3d(rctImg.left(), rctImg.bottom(), .0f);
+		glVertex3d(rctImg.left(), rctImg.bottom(), 0);
 		glTexCoord2d(1, 0);	// bottom-right
-		glVertex3d(rctImg.right(), rctImg.bottom(), .0f);
+		glVertex3d(rctImg.right(), rctImg.bottom(), 0);
 		glTexCoord2d(1, 1);	// top-right
-		glVertex3d(rctImg.right(), rctImg.top(), .0f);
+		glVertex3d(rctImg.right(), rctImg.top(), 0);
 		glTexCoord2d(0, 1);	// top-left
-		glVertex3d(rctImg.left(), rctImg.top(), .0f);
+		glVertex3d(rctImg.left(), rctImg.top(), 0);
 	glEnd();
 
 	glPopMatrix();
