@@ -93,8 +93,8 @@ void RenderWidget::paintGL()
 
 	QRectF rctImg(0,	// left
 		0,	// top
-		static_cast<qreal>(m_pImgBuff->m_width-1),	// width
-		static_cast<qreal>(m_pImgBuff->m_height-1));	// height
+		static_cast<qreal>(m_pImgBuff->m_width),	// width
+		static_cast<qreal>(m_pImgBuff->m_height));	// height
 
 	GLdouble dblZoom = getZoom(width(), height());
 
@@ -109,7 +109,7 @@ void RenderWidget::paintGL()
 	glPushMatrix();
 
 	if (m_ScrollOffset.x() || m_ScrollOffset.y()) 
-		glTranslated(m_ScrollOffset.x(), m_ScrollOffset.y(), 0);
+		glTranslated(std::floor(m_ScrollOffset.x()), std::floor(m_ScrollOffset.y()), 0);
 
 	if (fabs(dblZoom - 1.0) > DBL_EPSILON) 
 		glScaled(dblZoom, dblZoom, 1.0);
@@ -325,10 +325,10 @@ void RenderWidget::resetCenter()
 void RenderWidget::applyScrollLimit()
 {
 	// m_ScrollLimit checking
-	if (m_ScrollLimit.x() >= 0) m_ScrollOffset.setX(m_ScrollLimit.x());
+	if (m_ScrollLimit.x() >= 0.0) m_ScrollOffset.setX(m_ScrollLimit.x());
 	else if (m_ScrollOffset.x() > 0.0) m_ScrollOffset.setX(0.0);
 	else if (m_ScrollOffset.x() < m_ScrollLimit.x()) m_ScrollOffset.setX(m_ScrollLimit.x());
-	if (m_ScrollLimit.y() >= 0) m_ScrollOffset.setY(m_ScrollLimit.y());
+	if (m_ScrollLimit.y() >= 0.0) m_ScrollOffset.setY(m_ScrollLimit.y());
 	else if (m_ScrollOffset.y() > 0.0) m_ScrollOffset.setY(0.0);
 	else if (m_ScrollOffset.y() < m_ScrollLimit.y()) m_ScrollOffset.setY(m_ScrollLimit.y());
 }
