@@ -4,6 +4,38 @@
 #include "stdafx.h"
 #include "version.h"
 
+QString highlightModes[] = {
+	"0 - Clip",
+	"1 - Unclip",
+	"2 - Blend",
+	"3 - Rebuild",
+	"4 - Rebuild",
+	"5 - Rebuild",
+	"6 - Rebuild",
+	"7 - Rebuild",
+	"8 - Rebuild",
+	"9 - Rebuild"
+};
+
+std::tuple<QString, double, double>  gammaCurves[] = {
+	{"BT.709 (REC.709)", 2.222, 4.5},
+	{"sRGB", 2.4, 12.92}, 
+	{"L* (L-star)", 3.0, 9.033},
+	{"Linear Curve", 1.0, 1.0},
+	{"1.8 (ProPhoto, Apple, ColorMatch)", 1.8, 0.0},
+	{"2.2 (Adobe, WideGamut, CIE)", 2.2, 0.0}
+};
+
+QString outputProfiles[] = {
+	"Camera RAW",
+	"sRGB",
+	"Adobe RGB (1998)",
+	"WideGamut D65",
+	"ProPhoto D65",
+	"XYZ",
+	"ACES"
+};
+
 int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iteration, int expected)
 {
 	RawLab* rawlab = (RawLab*)callback_data;
@@ -137,56 +169,27 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderClippedPixels->setDefaultValue(0.001);
 	ui.sliderClippedPixels->setValue(0.001);
 
-	QString highlightModes[] = {
-		"0 - Clip",
-		"1 - Unclip",
-		"2 - Blend",
-		"3 - Rebuild",
-		"4 - Rebuild",
-		"5 - Rebuild",
-		"6 - Rebuild",
-		"7 - Rebuild",
-		"8 - Rebuild",
-		"9 - Rebuild"
-	};
 	for (auto item : highlightModes)
 		ui.cmbHighlightMode->addItem(item);
 	ui.cmbHighlightMode->setCurrentIndex(0);
 
-	QString gammaCurves[] = { 
-		"BT.709 (REC.709)", 
-		"sRGB", 
-		"L* (L-star)", 
-		"Linear Curve", 
-		"1.8 (ProPhoto, Apple, ColorMatch)", 
-		"2.2 (Adobe, WideGamut, CIE)"
-	};
 	for (auto item: gammaCurves)
-		ui.cmbGammaCurve->addItem(item);
+		ui.cmbGammaCurve->addItem(std::get<0>(item));
 	ui.cmbGammaCurve->addItem("Custom");
 	ui.cmbGammaCurve->setCurrentIndex(0);
 
 	ui.sliderGamma->setLabel(tr("Gamma:"));
 	ui.sliderGamma->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
-	ui.sliderGamma->setRange(100.0, 0.0, DECIMAL2);
-	ui.sliderGamma->setDefaultValue(2.222);
-	ui.sliderGamma->setValue(2.222);
+	ui.sliderGamma->setRange(100.0, 0.0, DECIMAL4);
+	ui.sliderGamma->setDefaultValue(std::get<1>(gammaCurves[0]));
+	ui.sliderGamma->setValue(std::get<1>(gammaCurves[0]));
 
 	ui.sliderSlope->setLabel(tr("Slope:"));
 	ui.sliderSlope->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
 	ui.sliderSlope->setRange(100.0, 0.0, DECIMAL4);
-	ui.sliderSlope->setDefaultValue(4.5);
-	ui.sliderSlope->setValue(4.5);
+	ui.sliderSlope->setDefaultValue(std::get<2>(gammaCurves[0]));
+	ui.sliderSlope->setValue(std::get<2>(gammaCurves[0]));
 
-	QString outputProfiles[] = {
-		"Camera RAW",
-		"sRGB",
-		"Adobe RGB (1998)",
-		"WideGamut D65",
-		"ProPhoto D65",
-		"XYZ",
-		"ACES"
-	};
 	for (auto item : outputProfiles)
 		ui.cmbOutProfile->addItem(item);
 	ui.cmbOutProfile->setCurrentIndex(1);
@@ -254,6 +257,22 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.sliderWBGreen2, SIGNAL(valueChanged(double)), this, SLOT(onWBGreen2ValueChanged(double)));
 	connect(ui.AutoGreen2, SIGNAL(clicked(bool)), this, SLOT(onAutoGreen2Clicked(bool)));
 	connect(ui.AutoBrightness, SIGNAL(clicked(bool)), this, SLOT(onAutoBrightnessClicked(bool)));
+	connect(ui.cmbGammaCurve, QOverload<int>::of(&QComboBox::activated),
+		[=](size_t index)
+		{
+			if (ui.cmbGammaCurve->currentText() != "Custom")
+			{
+				ui.sliderGamma->setDefaultValue(std::get<1>(gammaCurves[index]));
+				ui.sliderGamma->setValue(std::get<1>(gammaCurves[index]));
+				ui.sliderGamma->update();
+				ui.sliderSlope->setDefaultValue(std::get<2>(gammaCurves[index]));
+				ui.sliderSlope->setValue(std::get<2>(gammaCurves[index]));
+				ui.sliderSlope->update();
+			}
+		}
+	);
+	connect(ui.sliderGamma, SIGNAL(valueChanged(double)), this, SLOT(onGammaValueChanged(double)));
+	connect(ui.sliderSlope, SIGNAL(valueChanged(double)), this, SLOT(onSlopeValueChanged(double)));
 }
 
 RawLab::~RawLab()
@@ -481,6 +500,23 @@ void RawLab::updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb)
 void RawLab::setAutoGreen2(bool value)
 {
 	ui.AutoGreen2->setChecked(value);
+}
+
+void RawLab::onGammaSlope(double gamma, double slope)
+{
+	int decGamma = std::get<2>(ui.sliderGamma->getRange());
+	int decSlope = std::get<2>(ui.sliderSlope->getRange());
+
+	for (auto item : gammaCurves)
+	{
+		if (fabs(static_cast<float>(ui.sliderGamma->getValue()) - std::get<1>(item)) < (1 / std::pow(10, decGamma)) &&
+			fabs(static_cast<float>(ui.sliderSlope->getValue()) - std::get<2>(item)) < (1 / std::pow(10, decSlope)))
+		{
+			ui.cmbGammaCurve->setCurrentText(std::get<0>(item));
+			return;
+		}
+	}
+	ui.cmbGammaCurve->setCurrentText("Custom");
 }
 
 void RawLab::updateParamControls()
@@ -846,6 +882,16 @@ void RawLab::onAutoBrightnessClicked(bool checked)
 		ui.sliderBrightness->setValue(1.0);
 }
 
+void RawLab::onGammaValueChanged(double value)
+{
+	onGammaSlope(value, ui.sliderSlope->getValue());
+}
+
+void RawLab::onSlopeValueChanged(double value)
+{
+	onGammaSlope(ui.sliderGamma->getValue(), value);
+}
+
 bool RawLab::isCancel()
 {
 	if (!m_cancelProcess.test_and_set())
@@ -1190,6 +1236,12 @@ void RawLab::onRun()
 			}
 			// Highlights
 			params.highlight = ui.cmbHighlightMode->currentIndex();
+			// Gamma
+			params.gamm[0] = 1.0 / ui.sliderGamma->getValue();
+			params.gamm[1] = ui.sliderSlope->getValue();
+			params.gamm[2] = params.gamm[3] = params.gamm[4] = params.gamm[5] = 0;
+			// 
+
 		}
 		m_threadProcess = std::thread(&RawLab::RawProcess, this);
 	}

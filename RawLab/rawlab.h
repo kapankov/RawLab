@@ -75,6 +75,8 @@ private:
 	void setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb);
 	void updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb);
 	void setAutoGreen2(bool value);
+	// при ручном изменении слайдеров гаммы
+	void onGammaSlope(double gamma, double slope);
 	void updateParamControls();
 	// по текущим значениям слайдеров ББ определить пресет
 	int getWbPreset(const QString& lastPreset = "") const;
@@ -97,5 +99,7 @@ public slots:
 	void onWBGreen2ValueChanged(double value);
 	void onAutoGreen2Clicked(bool checked);
 	void onAutoBrightnessClicked(bool checked);
+	void onGammaValueChanged(double value);
+	void onSlopeValueChanged(double value);
 
 };
