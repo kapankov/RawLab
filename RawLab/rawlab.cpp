@@ -1,10 +1,10 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.green2
+// This is an open source non-commercial project. Dear PVS-Studio, please check it. 
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include "stdafx.h"
 #include "version.h"
 
-QString highlightModes[] = {
+const QString highlightModes[] = {
 	"0 - Clip",
 	"1 - Unclip",
 	"2 - Blend",
@@ -17,13 +17,19 @@ QString highlightModes[] = {
 	"9 - Rebuild"
 };
 
-std::tuple<QString, double, double>  gammaCurves[] = {
+const std::tuple<QString, double, double>  gammaCurves[] = {
 	{"BT.709 (REC.709)", 2.222, 4.5},
 	{"sRGB", 2.4, 12.92}, 
 	{"L* (L-star)", 3.0, 9.033},
 	{"Linear Curve", 1.0, 1.0},
 	{"1.8 (ProPhoto, Apple, ColorMatch)", 1.8, 0.0},
 	{"2.2 (Adobe, WideGamut, CIE)", 2.2, 0.0}
+};
+
+const QString cameraMatrix[] = {
+	"Libraw matrix",
+	"Embeded (DNG or for AsShot WB)",
+	"Embedded (always, if present)"
 };
 
 QString outputProfiles[] = {
@@ -35,6 +41,16 @@ QString outputProfiles[] = {
 	"XYZ",
 	"ACES"
 };
+
+QString getInputProfilesDir()
+{
+	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/iprofiles";
+}
+
+QString getOutputProfilesDir()
+{
+	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/oprofiles";
+}
 
 int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iteration, int expected)
 {
@@ -114,7 +130,7 @@ RawLab::RawLab(QWidget *parent)
 
 	m_plblState->setText(tr("Ready"));
 	setProgress(tr("Not running"));
-	m_plblInfo->setText(tr("Some information"));
+//	m_plblInfo->setText(tr("Information"));
 
 	ui.cmbWhiteBalance->addItem(tr("Custom"));
 	ui.cmbWhiteBalance->setCurrentIndex(0);
@@ -180,31 +196,27 @@ RawLab::RawLab(QWidget *parent)
 
 	ui.sliderGamma->setLabel(tr("Gamma:"));
 	ui.sliderGamma->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
-	ui.sliderGamma->setRange(100.0, 0.0, DECIMAL4);
+	ui.sliderGamma->setRange(10.0, 0.0, DECIMAL4);
 	ui.sliderGamma->setDefaultValue(std::get<1>(gammaCurves[0]));
 	ui.sliderGamma->setValue(std::get<1>(gammaCurves[0]));
 
 	ui.sliderSlope->setLabel(tr("Slope:"));
 	ui.sliderSlope->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
-	ui.sliderSlope->setRange(100.0, 0.0, DECIMAL4);
+	ui.sliderSlope->setRange(20.0, 0.0, DECIMAL4);
 	ui.sliderSlope->setDefaultValue(std::get<2>(gammaCurves[0]));
 	ui.sliderSlope->setValue(std::get<2>(gammaCurves[0]));
 
-	for (auto item : outputProfiles)
-		ui.cmbOutProfile->addItem(item);
-	ui.cmbOutProfile->setCurrentIndex(1);
+	updateInputProfiles();
+	m_inputProfilesWatcher = std::make_unique<QFileSystemWatcher>();
+	m_inputProfilesWatcher->addPath(getInputProfilesDir());
 
-	ui.cmbCameraProfile->addItem("None");
-	ui.cmbCameraProfile->setCurrentIndex(0);
+	connect(m_inputProfilesWatcher.get(), SIGNAL(directoryChanged(const QString&)), this, SLOT(onInputProfilesDirChanged(const QString&)));
 
-	QString cameraMatrix[] = {
-		"Libraw matrix",
-		"Embeded (DNG or for AsShot WB)",
-		"Embedded (always, if present)"
-	};
-	for (auto item : cameraMatrix)
-		ui.cmbCameraMatrix->addItem(item);
-	ui.cmbCameraMatrix->setCurrentIndex(1);
+	updateOutputProfiles();
+	m_outputProfilesWatcher = std::make_unique<QFileSystemWatcher>();
+	m_outputProfilesWatcher->addPath(getOutputProfilesDir());
+
+	connect(m_outputProfilesWatcher.get(), SIGNAL(directoryChanged(const QString&)), this, SLOT(onOutputProfilesDirChanged(const QString&)));
 
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));
@@ -240,6 +252,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(m_MoveUp, SIGNAL(activated()), ui.openGLWidget, SLOT(onMoveUp()));
 	connect(m_MoveDown, SIGNAL(activated()), ui.openGLWidget, SLOT(onMoveDown()));
 	connect(ui.openGLWidget, SIGNAL(zoomChanged(int)), this, SLOT(onZoomChanged(int)));
+	connect(ui.openGLWidget, SIGNAL(pointerChanged(int, int)), this, SLOT(onPointerChanged(int, int)));
 	connect(ui.openGLWidget, SIGNAL(scrollSizeChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollSizeChanged(int, int)));
 	connect(ui.openGLWidget, SIGNAL(scrollOffsetChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollOffsetChanged(int, int)));
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
@@ -704,6 +717,71 @@ void RawLab::updateGreen2Div()
 		1.0f;
 }
 
+void RawLab::updateInputProfiles()
+{
+	int curIndex = ui.cmbInputProfile->currentIndex();
+	QString curText = ui.cmbInputProfile->currentText();
+	ui.cmbInputProfile->clear();
+	for (auto item : cameraMatrix)
+		ui.cmbInputProfile->addItem(item);
+	QDirIterator it(getInputProfilesDir());
+	while (it.hasNext())
+	{
+		QFileInfo nextfile(it.next());
+		if (nextfile.isFile())
+			ui.cmbInputProfile->addItem(nextfile.fileName());
+	}
+	switch (curIndex)
+	{
+	case -1:
+		ui.cmbInputProfile->setCurrentIndex(1);
+		break;
+	case 0:
+	case 1:
+	case 2:
+		ui.cmbInputProfile->setCurrentIndex(curIndex);
+		break;
+	default:
+		curIndex = curText.isEmpty() ? -1 : ui.cmbInputProfile->findText(curText);
+		ui.cmbInputProfile->setCurrentIndex(curIndex > -1 ? curIndex : 1);
+	}
+}
+
+void RawLab::updateOutputProfiles()
+{
+	int curIndex = ui.cmbOutProfile->currentIndex();
+	QString curText = ui.cmbOutProfile->currentText();
+	ui.cmbOutProfile->clear();
+	for (auto item : outputProfiles)
+		ui.cmbOutProfile->addItem(item);
+	
+	QDirIterator it(getOutputProfilesDir());
+	while (it.hasNext())
+	{
+		QFileInfo nextfile(it.next());
+		if (nextfile.isFile())
+			ui.cmbOutProfile->addItem(nextfile.fileName());
+	}
+	switch (curIndex)
+	{
+	case -1:
+		ui.cmbOutProfile->setCurrentIndex(1);
+		break;
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+		ui.cmbOutProfile->setCurrentIndex(curIndex);
+		break;
+	default:
+		curIndex = curText.isEmpty() ? -1 : ui.cmbOutProfile->findText(curText);
+		ui.cmbOutProfile->setCurrentIndex(curIndex > -1 ? curIndex : 1);
+	}
+}
+
 void RawLab::openFile(const QString& filename)
 {
 	m_filename.clear();
@@ -794,6 +872,14 @@ void RawLab::onOpen()
 void RawLab::onZoomChanged(int prc)
 {
 	m_plblScale->setText(QString(tr("Scale: %1%")).arg(QString::number(prc)));
+}
+
+void RawLab::onPointerChanged(int x, int y)
+{
+	if (x < 0 || y < 0)
+		m_plblInfo->setText(QString(""));
+	else
+		m_plblInfo->setText(QString(tr("x=%1, y %2")).arg(QString::number(x), QString::number(y)));
 }
 
 void RawLab::onProcessed(QString message)
@@ -890,6 +976,16 @@ void RawLab::onGammaValueChanged(double value)
 void RawLab::onSlopeValueChanged(double value)
 {
 	onGammaSlope(ui.sliderGamma->getValue(), value);
+}
+
+void RawLab::onInputProfilesDirChanged(const QString & path)
+{
+	updateInputProfiles();
+}
+
+void RawLab::onOutputProfilesDirChanged(const QString & path)
+{
+	updateOutputProfiles();
 }
 
 bool RawLab::isCancel()
@@ -1069,7 +1165,7 @@ void RawLab::fillProperties(const LibRawEx & lr)
 		else
 			addPropertiesItem(tr("Focus Mode"), QString::number(lr.imgdata.shootinginfo.FocusMode));
 	}
-	addPropertiesItem(tr("Flash exp.compensation"), QString::number(lr.imgdata.other.FlashEC, 'f', 2));
+//	addPropertiesItem(tr("Flash exp.compensation"), QString::number(lr.imgdata..other.FlashEC, 'f', 2));
 	addPropertiesItem(tr("Shot order"), QString::number(lr.imgdata.other.shot_order));
 	if (lr.imgdata.other.desc[0])
 		addPropertiesItem(tr("Description"), QString(lr.imgdata.other.desc));
@@ -1240,8 +1336,32 @@ void RawLab::onRun()
 			params.gamm[0] = 1.0 / ui.sliderGamma->getValue();
 			params.gamm[1] = ui.sliderSlope->getValue();
 			params.gamm[2] = params.gamm[3] = params.gamm[4] = params.gamm[5] = 0;
-			// 
-
+			// Input profile
+			params.camera_profile = nullptr;
+			switch(ui.cmbInputProfile->currentIndex())
+			{
+			case 1:
+				params.use_camera_matrix = 1;
+				break;
+			case 2:
+				params.use_camera_matrix = 3;
+				break;
+			default:
+				params.use_camera_matrix = 0;
+				m_inputProfile = (getInputProfilesDir() + "/" + ui.cmbInputProfile->currentText()).toStdString();
+				params.camera_profile = const_cast<char*>(m_inputProfile.c_str());
+				break;
+			}
+			// Output profile
+			params.output_color = ui.cmbOutProfile->currentIndex();
+			if (params.output_color > -1 && params.output_color < sizeof(outputProfiles) / sizeof(QString))
+				params.output_profile = nullptr;
+			else
+			{
+				params.output_color = 1;
+				m_outputProfile = (getOutputProfilesDir() + "/" + ui.cmbOutProfile->currentText()).toStdString();
+				params.output_profile = const_cast<char*>(m_outputProfile.c_str());
+			}
 		}
 		m_threadProcess = std::thread(&RawLab::RawProcess, this);
 	}

@@ -84,6 +84,7 @@ class LibRawEx : public LibRaw
 	std::unique_ptr<libraw_output_params_t> m_defaultLibrawOutputParamsPtr; // копия исходных параметров Libraw на случай, когда нужно восстановить параметры по умолчанию
 public:
 	LibRawEx();
+
 	librawex_output_params_t exparams;
 
 	std::array<float, 4> getAutoWB();

@@ -60,6 +60,14 @@ private:
 	std::thread m_threadProcess;
 	std::atomic_flag m_cancelProcess ATOMIC_FLAG_INIT;
 	RgbBuffPtr	m_pRawBuff;
+	// отслеживает изменения в каталоге с профилями камер
+	// и обновляет комбобокс Input Profiles
+	std::unique_ptr<QFileSystemWatcher> m_inputProfilesWatcher;
+	// отслеживает изменения в каталоге с выходными профилями
+	// и обновляет комбобокс Output Profiles
+	std::unique_ptr<QFileSystemWatcher> m_outputProfilesWatcher;
+	std::string m_inputProfile;
+	std::string m_outputProfile;
 
 	bool setImageJpegFile(const QString& filename);
 	bool setImageRawFile(const QString&  filename);
@@ -81,6 +89,8 @@ private:
 	// по текущим значениям слайдеров ББ определить пресет
 	int getWbPreset(const QString& lastPreset = "") const;
 	void updateGreen2Div();
+	void updateInputProfiles();
+	void updateOutputProfiles();
 signals:
 	void rawProcessed(QString message);
 	void setRun(bool default);
@@ -91,6 +101,7 @@ public slots:
 	void onRun();
 	void onAbout();
 	void onZoomChanged(int prc);
+	void onPointerChanged(int x, int y);
 	void onProcessed(QString message);
 	void onSetRun(bool default);
 	void onWBRedValueChanged(double value);
@@ -101,5 +112,7 @@ public slots:
 	void onAutoBrightnessClicked(bool checked);
 	void onGammaValueChanged(double value);
 	void onSlopeValueChanged(double value);
+	void onInputProfilesDirChanged(const QString &path);
+	void onOutputProfilesDirChanged(const QString &path);
 
 };

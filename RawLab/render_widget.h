@@ -81,6 +81,7 @@ signals:
 	void scrollOffsetChanged(int xOffset, int yOffset);
 	/* новый размер изображения с учетом зума */
 	void scrollSizeChanged(int x, int y);
+	void pointerChanged(int x, int y);
 
 public slots:
 	void onZoomIn();
@@ -109,6 +110,8 @@ protected:
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
+	void enterEvent(QEvent* event) override;
+	void leaveEvent(QEvent* event) override;
 
 	void onZoomEvent();
 	GLdouble getZoom(int width, int height) const;

@@ -25,7 +25,7 @@ std::array<float, 4> LibRawEx::getAutoWB()
 	const unsigned int &filters = imgdata.idata.filters;
 	const unsigned int &maximum = imgdata.color.maximum;
 	const ushort &shrink = libraw_internal_data.internal_output_params.shrink;
-	const unsigned int (&cblack)[4102] = imgdata.color.cblack;
+	const unsigned int (&cblack)[LIBRAW_CBLACK_SIZE] = imgdata.color.cblack;
 	ushort (* const (&image))[4] = imgdata.image;
 	unsigned int c;
 	int val;
@@ -90,6 +90,10 @@ const double LibRaw_constants::xyz_rgb[3][3] = {
     {0.4124564, 0.3575761, 0.1804375}, {0.2126729, 0.7151522, 0.0721750}, {0.0193339, 0.1191920, 0.9503041}};
 
 const float LibRaw_constants::d65_white[3] = {0.95047f, 1.0f, 1.08883f};
+
+//rgb_constants
+#define xyz_rgb         (LibRaw_constants::xyz_rgb)
+#define d65_white       (LibRaw_constants::d65_white)
 
 /* WF filtering is allowed to triple libraw license */
 //#define wf_deband_treshold	(exparams.wf_deband_treshold)

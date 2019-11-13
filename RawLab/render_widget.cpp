@@ -172,25 +172,51 @@ void RenderWidget::mouseDoubleClickEvent(QMouseEvent * event)
 
 void RenderWidget::mouseMoveEvent(QMouseEvent * event)
 {
-	if (event->buttons() & Qt::LeftButton && m_pImgBuff && m_dblZoom)
+	if (m_pImgBuff)
 	{
-		m_isCenter = false;
-		if (fabs(m_dblZoom) < DBL_EPSILON) m_dblZoom =  getZoom(width(), height());
 		QPoint ptMousePos = event->pos();
+		// скроллинг мышью
+		if (event->buttons() & Qt::LeftButton && m_dblZoom)
+		{
+			m_isCenter = false;
+			if (fabs(m_dblZoom) < DBL_EPSILON) m_dblZoom = getZoom(width(), height());
 
-		if (int iX = (ptMousePos.x() - m_DragPoint.x()))
-			m_ScrollOffset.setX(m_ScrollOffset.x() + iX);
+			if (int iX = (ptMousePos.x() - m_DragPoint.x()))
+				m_ScrollOffset.setX(m_ScrollOffset.x() + iX);
 
-		if (int iY = (ptMousePos.y() - m_DragPoint.y()))
-			m_ScrollOffset.setY(m_ScrollOffset.y() + iY);
+			if (int iY = (ptMousePos.y() - m_DragPoint.y()))
+				m_ScrollOffset.setY(m_ScrollOffset.y() + iY);
 
-		applyScrollLimit();
+			applyScrollLimit();
 
-		m_DragPoint = ptMousePos;
+			m_DragPoint = ptMousePos;
 
-		emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
+			emit scrollOffsetChanged(static_cast<int>(m_ScrollOffset.x()), static_cast<int>(m_ScrollOffset.y()));
 
-		repaint();
+			repaint();
+		}
+		// просигналить позицию курсора на изображении (в координатах изображения без зума)
+		else
+		{
+			QPointF ptCoord(ptMousePos);
+			ptCoord.setX(ptCoord.x() - floor(m_ScrollOffset.x()));
+			ptCoord.setY(ptCoord.y() - floor(m_ScrollOffset.y()));
+			if (ptCoord.x() >= .0 && ptCoord.y() >= .0)
+			{
+				double dblZoom = m_dblZoom;
+				if (fabs(dblZoom) < DBL_EPSILON) dblZoom = getZoom(width(), height());
+				ptCoord.setX(ptCoord.x() / dblZoom);
+				ptCoord.setY(ptCoord.y() / dblZoom);
+				
+				ptMousePos.setX(ptCoord.x());
+				ptMousePos.setY(ptCoord.y());
+				if (ptMousePos.x() >= m_pImgBuff->m_width || ptMousePos.y() >= m_pImgBuff->m_height)
+					emit pointerChanged(-1, -1);
+				else
+					emit pointerChanged(ptMousePos.x(), ptMousePos.y());
+			}
+			else emit pointerChanged(-1, -1);
+		}
 	}
 }
 
@@ -258,6 +284,17 @@ void RenderWidget::wheelEvent(QWheelEvent * event)
 			}
 		event->accept();
 	}
+}
+
+void RenderWidget::enterEvent(QEvent* event)
+{
+	QPoint ptMousePos = mapFromGlobal(QCursor::pos());
+	emit pointerChanged(ptMousePos.x(), ptMousePos.y());
+}
+
+void RenderWidget::leaveEvent(QEvent* event)
+{
+	emit pointerChanged(-1, -1);
 }
 
 void RenderWidget::onZoomEvent()

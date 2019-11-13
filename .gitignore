@@ -271,3 +271,5 @@ __pycache__/
 /ToDo.txt
 /lcms2-2.9
 /RawSpeed
+*.exe
+*.iss
