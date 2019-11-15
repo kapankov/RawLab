@@ -223,6 +223,9 @@ RawLab::RawLab(QWidget *parent)
 
 	ui.imageScrollWidget->setViewport(ui.openGLWidget);
 
+	// connections
+	connect(m_NextLeftPanelShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this), &QShortcut::activated, this, &RawLab::onNextLeftPanel);
+
 	connect(this, SIGNAL(rawProcessed(QString)),
 			this, SLOT(onProcessed(QString)),
 			Qt::QueuedConnection);
@@ -877,7 +880,7 @@ void RawLab::onZoomChanged(int prc)
 void RawLab::onPointerChanged(int x, int y)
 {
 	if (x < 0 || y < 0)
-		m_plblInfo->setText(QString(""));
+		m_plblInfo->setText(QString());
 	else
 		m_plblInfo->setText(QString(tr("x=%1, y %2")).arg(QString::number(x), QString::number(y)));
 }
@@ -1258,6 +1261,11 @@ void RawLab::onExit()
 
 void RawLab::onRun()
 {
+	if (m_filename.isEmpty())
+	{
+		onOpen();
+		return;
+	}
 	if (!m_threadProcess.joinable())
 	{
 		m_cancelProcess.clear();
@@ -1419,4 +1427,10 @@ void RawLab::onAbout()
 			LIBRAW_VERSION_STR
 		)
 	);
+}
+
+void RawLab::onNextLeftPanel()
+{
+	int ci = ui.tabWidget->currentIndex();
+	ui.tabWidget->setCurrentIndex(ci < ui.tabWidget->count()-1 ? ci+1 : 0);
 }

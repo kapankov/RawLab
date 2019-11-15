@@ -112,6 +112,8 @@ protected:
 	void wheelEvent(QWheelEvent *event) override;
 	void enterEvent(QEvent* event) override;
 	void leaveEvent(QEvent* event) override;
+	
+	void onMousePosChanged(const QPoint& ptMousePos);
 
 	void onZoomEvent();
 	GLdouble getZoom(int width, int height) const;

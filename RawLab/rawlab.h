@@ -69,6 +69,8 @@ private:
 	std::string m_inputProfile;
 	std::string m_outputProfile;
 
+	QShortcut* m_NextLeftPanelShortcut;
+
 	bool setImageJpegFile(const QString& filename);
 	bool setImageRawFile(const QString&  filename);
 	void setProgress(const QString& text);
@@ -100,6 +102,7 @@ public slots:
 	void onExit();
 	void onRun();
 	void onAbout();
+	void onNextLeftPanel();
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
 	void onProcessed(QString message);
