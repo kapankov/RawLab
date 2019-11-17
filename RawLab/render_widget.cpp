@@ -33,7 +33,14 @@ void RenderWidget::setEmptyLabel(QString label)
 bool RenderWidget::UpdateImage()
 {
 	bool result = false;
-	if (m_tex_id) glDeleteTextures(1, &m_tex_id);
+	if (m_tex_id)
+	{
+		glDeleteTextures(1, &m_tex_id);
+		// glDeleteTextures не обнуляет id текстуры, и из-за этого можно удалить чужую текстуру
+		// например, в релизе некорректно работает QPainter::drawText
+		m_tex_id = 0;
+	}
+
 	m_dblZoom = .0;
 	m_isCenter = true;
 
@@ -85,13 +92,8 @@ void RenderWidget::paintGL()
 {
 	if (m_pImgBuff && !m_pImgBuff->m_buff)
 	{
-//		doneCurrent();
 		QPainter painter(this);
 		painter.setPen(qRgb(0xC0, 0xC0, 0xC0));
-
-		painter.beginNativePainting();
-		glClear(GL_COLOR_BUFFER_BIT);
-		painter.endNativePainting();
 
 		QFont font = painter.font(); // enlarged the text
 		font.setPixelSize(14);
