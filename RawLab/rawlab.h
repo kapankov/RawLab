@@ -78,6 +78,10 @@ private:
 	void addPropertiesSection(const QString& name);
 	void addPropertiesItem(const QString& name, const QString& value);
 	void fillProperties(const LibRawEx &lr);
+	// извлечь из открытого RAW-файла превью и показать его
+	bool ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr);
+	// Получение обработанного изображения из LibRaw в m_pRawBuff
+	void ExtractProcessedRaw();
 	void RawProcess();
 
 	void setWBSliders(const float(&mul)[4], bool setDefault = true);
@@ -99,10 +103,16 @@ signals:
 public slots:
 	void onOpen();
 	void onSave();
+	void onSavePreview();
 	void onExit();
 	void onRun();
 	void onAbout();
+	// Переключение вкладок Process-Properties (Ctrl+Tab)
 	void onNextLeftPanel();
+	// показать Preview
+	void onShowPreview();
+	// показать результат RAW-обработки
+	void onShowProcessedRaw();
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
 	void onProcessed(QString message);

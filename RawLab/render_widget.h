@@ -68,13 +68,16 @@ class RenderWidget : public QOpenGLWidget
 	// обновляется при зуме и ресайзе
 	QPointF	m_ScrollLimit;
 	// дополнительное смещение (поля) изображение при скролле
-	qreal m_ExtraOffset;
+	qreal	m_ExtraOffset;
+	// надпись в случае "пустого" m_pImgBuff
+	QString	m_EmptyLabel;
 	
 public:
 	RenderWidget(QWidget *parent = 0);
 	~RenderWidget();
 
 	bool setRgbBuff(RgbBuffPtr ptr);
+	void setEmptyLabel(QString label);
 
 signals:
 	void zoomChanged(int prc);

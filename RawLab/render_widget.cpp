@@ -10,6 +10,7 @@ RenderWidget::RenderWidget(QWidget * parent)
 	, m_isCenter(true)
 	, m_dblZoom(.0)
 	, m_ExtraOffset(0.0)
+	, m_EmptyLabel(tr("No image"))
 {
 	resetCenter();
 }
@@ -22,6 +23,11 @@ bool RenderWidget::setRgbBuff(RgbBuffPtr ptr)
 {
 	m_pImgBuff = std::move(ptr);
 	return UpdateImage();
+}
+
+void RenderWidget::setEmptyLabel(QString label)
+{
+	m_EmptyLabel = label;
 }
 
 bool RenderWidget::UpdateImage()
@@ -77,19 +83,30 @@ void RenderWidget::initializeGL()
 
 void RenderWidget::paintGL()
 {
-	if (!m_tex_id || !m_pImgBuff)
-		return;
-
-	if (!m_pImgBuff->m_buff)
+	if (m_pImgBuff && !m_pImgBuff->m_buff)
 	{
+//		doneCurrent();
 		QPainter painter(this);
-		painter.setPen(/*Qt::white*/ qRgb(0xC0, 0xC0, 0xC0));
-		painter.setFont(QFont("Helvetica", 16, QFont::Bold));
-//		painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-		painter.drawText(rect(), Qt::AlignHCenter | Qt::AlignVCenter, tr("Preview image is not available"));
-		painter.end();
+		painter.setPen(qRgb(0xC0, 0xC0, 0xC0));
+
+		painter.beginNativePainting();
+		glClear(GL_COLOR_BUFFER_BIT);
+		painter.endNativePainting();
+
+		QFont font = painter.font(); // enlarged the text
+		font.setPixelSize(14);
+		font.setBold(true);
+		painter.setFont(font);
+
+		painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+		painter.drawText(rect(), Qt::AlignHCenter | Qt::AlignVCenter, m_EmptyLabel);
+//		painter.end(); // It will be called by the painter's destructor implicitly
+
 		return;
 	}
+
+	if (!m_tex_id || !m_pImgBuff)
+		return;
 
 	QRectF rctImg(0,	// left
 		0,	// top

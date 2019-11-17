@@ -132,6 +132,8 @@ RawLab::RawLab(QWidget *parent)
 	setProgress(tr("Not running"));
 //	m_plblInfo->setText(tr("Information"));
 
+	ui.openGLWidget->setEmptyLabel(tr("Preview image is not available"));
+
 	ui.cmbWhiteBalance->addItem(tr("Custom"));
 	ui.cmbWhiteBalance->setCurrentIndex(0);
 
@@ -238,6 +240,9 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.action_Exit, SIGNAL(triggered()), this, SLOT(onExit()));
 	connect(ui.action_Open, SIGNAL(triggered()), this, SLOT(onOpen()));
 	connect(ui.action_Save, SIGNAL(triggered()), this, SLOT(onSave()));
+	connect(ui.actionSave_Preview, SIGNAL(triggered()), this, SLOT(onSavePreview()));
+	connect(ui.actionPreview, SIGNAL(triggered()), this, SLOT(onShowPreview()));
+	connect(ui.actionProcessed_RAW, SIGNAL(triggered()), this, SLOT(onShowProcessedRaw()));
 
 	connect(ui.action_Run, SIGNAL(triggered()), this, SLOT(onRun()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
@@ -344,41 +349,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 		// заполнить свойства
 		fillProperties(*pLr.get());
 
-		if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
-		{
-			int errcode = 0;
-			if (libraw_processed_image_t *mem_thumb = pLr->dcraw_make_mem_thumb(&errcode))
-			{
-				if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
-				{
-					result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true)));
-				}
-				else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
-				{
-					// Canon EOS 1D (TIF)
-					// Kodak DCS Pro SLR/n (DCR)
-					// Kodak DC50 (KDC)
-					// Nikon D1 (NEF)
-					BmpBuff buff;
-					buff.m_buff = mem_thumb->data;
-					buff.m_width = mem_thumb->width;
-					buff.m_height = mem_thumb->height;
-					buff.m_bits = mem_thumb->bits;
-					buff.m_colors = mem_thumb->colors;
-					result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromBitmap(&buff, true)));
-					buff.m_buff = nullptr; // Обязательно! Иначе будет освобождение памяти через delete
-				}
-				else throw RawLabException(QString(tr("Unknown preview image format")).toStdString());
-				pLr->dcraw_clear_mem(mem_thumb);
-			}
-			else throw RawLabException(QString(tr("Failed to create a preview image in memory: error code %1")).arg(LibRaw::strerror(errcode)).toStdString());
-		}
-		else
-		{
-			// MINOLTA RD175 (MDC)
-			// нет превью, создать RgbBuffPtr с пустым буфером
-			result = ui.openGLWidget->setRgbBuff(std::unique_ptr<RgbBuff>(new RgbBuff()));
-		}
+		result = ExtractAndShowPreview(std::move(pLr));
 	}
 	else throw RawLabException(QString(tr("Unknown RAW format")).toStdString());
 	return result;
@@ -387,6 +358,35 @@ bool RawLab::setImageRawFile(const QString &  filename)
 void RawLab::setProgress(const QString & text)
 {
 	m_plblProgress->setText(text);
+}
+
+void RawLab::ExtractProcessedRaw()
+{
+	int width, height, colors, bps;
+	size_t stride;
+	m_lr->get_mem_image_format(&width, &height, &colors, &bps);
+	stride = static_cast<size_t>(width)* static_cast<size_t>(colors);
+	if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
+
+	m_pRawBuff = std::make_unique<RgbBuff>();
+	m_pRawBuff->m_buff = new unsigned char[stride * static_cast<size_t>(height)];
+
+	libraw_data_t& imgdata = m_lr->imgdata;
+	libraw_output_params_t& params = imgdata.params;
+	int ibps = params.output_bps;
+	params.output_bps = 8;
+	m_lr->copy_mem_image(m_pRawBuff->m_buff, static_cast<int>(stride), 0);
+
+	// зеркально перевернуть
+	size_t halfheight = static_cast<size_t>(height) >> 1; //  = height/2
+	// #pragma omp parallel for никакого профита здесь
+	for (size_t row = 0; row < halfheight; ++row)
+		for (size_t col = 0; col < stride; col += sizeof(unsigned int))
+			std::swap(*reinterpret_cast<unsigned int*>(&m_pRawBuff->m_buff[stride * row + col]),
+				*reinterpret_cast<unsigned int*>(&m_pRawBuff->m_buff[stride * (static_cast<size_t>(height) - row - 1) + col]));
+
+	m_pRawBuff->m_width = width;
+	m_pRawBuff->m_height = height;
 }
 
 void RawLab::RawProcess()
@@ -416,31 +416,6 @@ void RawLab::RawProcess()
 				result = m_lr->dcraw_process();
 				if (result == LIBRAW_SUCCESS)
 				{
-					int width, height, colors, bps;
-					size_t stride;
-					m_lr->get_mem_image_format(&width, &height, &colors, &bps);
-					stride = static_cast<size_t>(width) * static_cast<size_t>(colors);
-					if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
-
-					m_pRawBuff = std::unique_ptr<RgbBuff>(new RgbBuff());
-					m_pRawBuff->m_buff = new unsigned char[stride*static_cast<size_t>(height)];
-
-					libraw_output_params_t& params = imgdata.params;
-					int ibps = params.output_bps;
-					params.output_bps = 8;
-					m_lr->copy_mem_image(m_pRawBuff->m_buff, static_cast<int>(stride), 0);
-
-					// зеркально перевернуть
-					size_t halfheight = static_cast<size_t>(height) >> 1; //  = height/2
-					// #pragma omp parallel for никакого профита здесь
-					for (size_t row = 0; row < halfheight; ++row)
-						for (size_t col = 0; col < stride; col+=sizeof(unsigned int))
-							std::swap(*reinterpret_cast<unsigned int*>(&m_pRawBuff->m_buff[stride*row + col]),
-								*reinterpret_cast<unsigned int*>(&m_pRawBuff->m_buff[stride*(static_cast<size_t>(height) - row - 1) + col]));
-
-					m_pRawBuff->m_width = width;
-					m_pRawBuff->m_height = height;
-
 					std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
 
 					emit rawProcessed(tr("Processed in %1 sec.").arg(elapsed.count(), 0 ,'f', 2));
@@ -889,10 +864,16 @@ void RawLab::onProcessed(QString message)
 {
 	if (!message.isEmpty())
 		setProgress(message);
-	else
-		setProgress(tr("Ready"));
+//	else
+//		setProgress(tr("Ready"));
+	ExtractProcessedRaw();
 	if (m_pRawBuff && m_pRawBuff->m_buff)
+	{
 		ui.openGLWidget->setRgbBuff(std::move(m_pRawBuff));
+		ui.actionPreview->setChecked(false);
+		ui.actionProcessed_RAW->setChecked(true);
+		ui.actionProcessed_RAW->setVisible(true);
+	}
 }
 
 void RawLab::onSetRun(bool default)
@@ -1227,6 +1208,48 @@ void RawLab::fillProperties(const LibRawEx & lr)
 
 }
 
+bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
+{
+	bool result = false;
+	if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
+	{
+		int errcode = 0;
+		if (libraw_processed_image_t* mem_thumb = pLr->dcraw_make_mem_thumb(&errcode))
+		{
+			if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
+			{
+				result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true)));
+			}
+			else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
+			{
+				// Canon EOS 1D (TIF)
+				// Kodak DCS Pro SLR/n (DCR)
+				// Kodak DC50 (KDC)
+				// Nikon D1 (NEF)
+				BmpBuff buff;
+				buff.m_buff = mem_thumb->data;
+				buff.m_width = mem_thumb->width;
+				buff.m_height = mem_thumb->height;
+				buff.m_bits = mem_thumb->bits;
+				buff.m_colors = mem_thumb->colors;
+				result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromBitmap(&buff, true)));
+				buff.m_buff = nullptr; // Обязательно! Иначе будет освобождение памяти через delete
+			}
+			else throw RawLabException(QString(tr("Unknown preview image format")).toStdString());
+			pLr->dcraw_clear_mem(mem_thumb);
+		}
+		else throw RawLabException(QString(tr("Failed to create a preview image in memory: error code %1")).arg(LibRaw::strerror(errcode)).toStdString());
+	}
+	else
+	{
+		// MINOLTA RD175 (MDC)
+		// нет превью, создать RgbBuffPtr с пустым буфером
+		result = ui.openGLWidget->setRgbBuff(std::unique_ptr<RgbBuff>(new RgbBuff()));
+	}
+	if (result) ui.actionPreview->setVisible(true); // при первом открытии файла активировать меню View->Preview
+	return result;
+}
+
 void RawLab::onSave()
 {
 	bool istiff = m_lr->imgdata.params.output_tiff == 1;
@@ -1254,6 +1277,51 @@ void RawLab::onSave()
 	}
 }
 
+void RawLab::onSavePreview()
+{
+	if (!m_filename.isEmpty())
+	{
+		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
+		if (pLr->open_file(m_filename.toStdString().c_str()) == LIBRAW_SUCCESS)
+		{
+			if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
+			{
+				QString tmpfilename; // имя файла по умолчанию при вызове диалога Save
+				QString filter(tr("Jpeg files (*.jpg)"));
+				QString ext = QFileInfo(m_filename).suffix();
+				switch (pLr->imgdata.thumbnail.tformat)
+				{
+				case LIBRAW_THUMBNAIL_JPEG:
+					tmpfilename = ext.isEmpty() ? m_filename + QString(".jpg") : m_filename.replace(QRegularExpression(ext + "$"), QString("jpg"));
+					break;
+				case LIBRAW_THUMBNAIL_BITMAP:
+					tmpfilename = ext.isEmpty() ? m_filename + QString(".ppm") : m_filename.replace(QRegularExpression(ext + "$"), QString("ppm"));
+					break;
+				default:
+					QMessageBox::critical(this, tr("RawLab error"),
+						QString(tr("Preview format unknown")));
+					return;
+				}
+				// получить имя сохраняемого файла
+				QString fileName = QFileDialog::getSaveFileName(this,
+					tr("Save preview file..."),
+					tmpfilename,
+					filter);
+				if (!fileName.isEmpty())
+				{
+					// сохраняем как в dcraw
+					int result = m_lr->dcraw_thumb_writer(fileName.toStdString().c_str());
+					if (result != LIBRAW_SUCCESS)
+						QMessageBox::critical(this, tr("RawLab error"),
+							QString(m_lr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
+				}
+			}
+			else QMessageBox::critical(this, tr("RawLab error"),
+				QString(tr("Preview not available")));
+		}
+	}
+}
+
 void RawLab::onExit()
 {
 	QApplication::quit();
@@ -1268,6 +1336,10 @@ void RawLab::onRun()
 	}
 	if (!m_threadProcess.joinable())
 	{
+		ui.actionPreview->setChecked(true);
+		ui.actionProcessed_RAW->setChecked(false);
+		ui.actionProcessed_RAW->setVisible(false);
+
 		m_cancelProcess.clear();
 		m_lr->clearCancelFlag();
 		// взять параметры из UI
@@ -1433,4 +1505,28 @@ void RawLab::onNextLeftPanel()
 {
 	int ci = ui.tabWidget->currentIndex();
 	ui.tabWidget->setCurrentIndex(ci < ui.tabWidget->count()-1 ? ci+1 : 0);
+}
+
+void RawLab::onShowPreview()
+{
+	if (!m_filename.isEmpty())
+	{
+		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
+		if (pLr->open_file(m_filename.toStdString().c_str()) == LIBRAW_SUCCESS)
+			ExtractAndShowPreview(std::move(pLr));
+	}
+	ui.actionPreview->setChecked(true);
+	ui.actionProcessed_RAW->setChecked(false);
+}
+
+void RawLab::onShowProcessedRaw()
+{
+	// Checkable menu item переключает свой check до вызова сигнала
+	// поэтому здесь нужно проверять на неустановленный check,
+	// чтобы повторно не устанавливать Processed RAW
+	if (ui.actionProcessed_RAW->isChecked())
+		// show Processed RAW
+		onProcessed(QString());
+	else
+		ui.actionProcessed_RAW->setChecked(true);
 }
