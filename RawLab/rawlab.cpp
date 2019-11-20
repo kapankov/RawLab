@@ -1310,10 +1310,10 @@ void RawLab::onSavePreview()
 				if (!fileName.isEmpty())
 				{
 					// сохраняем как в dcraw
-					int result = m_lr->dcraw_thumb_writer(fileName.toStdString().c_str());
+					int result = pLr->dcraw_thumb_writer(fileName.toStdString().c_str());
 					if (result != LIBRAW_SUCCESS)
 						QMessageBox::critical(this, tr("RawLab error"),
-							QString(m_lr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
+							QString(pLr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
 				}
 			}
 			else QMessageBox::critical(this, tr("RawLab error"),
