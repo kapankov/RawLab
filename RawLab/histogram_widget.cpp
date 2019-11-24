@@ -50,7 +50,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 			*std::max_element(m_img->m_histogram[2].begin(), m_img->m_histogram[2].end() - 1)
 		);
 
-		m_stat = QString(tr("max = %1\n\nOE:\nred = %2\ngreen = %3\nblue = %4\n\nUE:\nred = %5\ngreen = %6\nblue = %7")).arg(
+		m_stat = QString(tr("max = %1\n\nOE:\nR = %2\nG = %3\nB = %4\n\nUE:\nR = %5\nG = %6\nB = %7")).arg(
 			QString::number(static_cast<int>(maxh)),
 			QString::number(m_img->m_histogram[0].at(255)),
 			QString::number(m_img->m_histogram[1].at(255)),
@@ -89,7 +89,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 		}
 		for (size_t i = 0; i < m_HorzLines; ++i)
 		{
-			int y = static_cast<int>(static_cast<double>(hr.height())/ static_cast<double>(m_HorzLines * (i + 1)));
+			int y = static_cast<int>(static_cast<double>(hr.height())/ static_cast<double>(m_HorzLines) * static_cast<double>(i + 1));
 			painter.drawLine(QPoint(0, y), QPoint(hr.right(), y));
 		}
 		// восстановить линии (можно нарисовать другим цветом, более выраженным)
