@@ -523,6 +523,7 @@ void RenderWidget::onCenter()
 
 void RenderWidget::onMoveLeft()
 {
+	if (!m_pImgBuff) return;
 	int dblW = m_dblZoom * m_pImgBuff->m_width > width() ? width() : 1;
 	dblW = dblW > 100 ? dblW / 100 : 1;
 	if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() + dblW);
@@ -533,6 +534,7 @@ void RenderWidget::onMoveLeft()
 
 void RenderWidget::onMoveRight()
 {
+	if (!m_pImgBuff) return;
 	int dblW = m_dblZoom * m_pImgBuff->m_width > width() ? width() : 1;
 	dblW = dblW > 100 ? dblW / 100 : 1;
 	if (m_ScrollOffset.x() <= 0) m_ScrollOffset.setX(m_ScrollOffset.x() - dblW);
@@ -543,6 +545,7 @@ void RenderWidget::onMoveRight()
 
 void RenderWidget::onMoveUp()
 {
+	if (!m_pImgBuff) return;
 	double dblH = m_dblZoom * m_pImgBuff->m_height > height() ? height() : 1;
 	dblH = dblH > 100. ? dblH / 100. : 1.;
 	if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() + dblH);
@@ -553,6 +556,7 @@ void RenderWidget::onMoveUp()
 
 void RenderWidget::onMoveDown()
 {
+	if (!m_pImgBuff) return;
 	double dblH = m_dblZoom * m_pImgBuff->m_height > height() ? height() : 1;
 	dblH = dblH > 100. ? dblH / 100. : 1.;
 	if (m_ScrollOffset.y() <= 0) m_ScrollOffset.setY(m_ScrollOffset.y() - dblH);
