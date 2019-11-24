@@ -85,6 +85,7 @@ signals:
 	/* новый размер изображения с учетом зума */
 	void scrollSizeChanged(int x, int y);
 	void pointerChanged(int x, int y);
+	void imageChanged(RgbBuff* buff);
 
 public slots:
 	void onZoomIn();

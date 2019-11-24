@@ -22,6 +22,8 @@ RenderWidget::~RenderWidget()
 bool RenderWidget::setRgbBuff(RgbBuffPtr ptr)
 {
 	m_pImgBuff = std::move(ptr);
+	//
+	emit imageChanged(m_pImgBuff.get());
 	return UpdateImage();
 }
 

@@ -23,19 +23,23 @@ public:
 	}
 };
 
+using histogramvec = std::vector<unsigned int>;
+
 struct ImgBuff
 {
 	unsigned char* m_buff;
 	int m_width;
 	int m_height;
 
-	int* m_histogram;//[4][LIBRAW_HISTOGRAM_SIZE]
+	histogramvec m_histogram[3];
 
-	ImgBuff() : m_buff(nullptr), m_width(0), m_height(0), m_histogram(nullptr){}
-	~ImgBuff() { delete[] m_buff; delete[] m_histogram; }
+	ImgBuff() : m_buff(nullptr), m_width(0), m_height(0) {}
+	~ImgBuff() { delete[] m_buff; }
 	void alloc_histogram()
 	{
-		m_histogram = new int[LIBRAW_HISTOGRAM_SIZE * 4]();
+		for (int i = 0; i < 3; ++i)
+			m_histogram[i].resize(256);
+
 	}
 };
 

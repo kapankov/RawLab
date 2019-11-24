@@ -243,6 +243,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionSave_Preview, SIGNAL(triggered()), this, SLOT(onSavePreview()));
 	connect(ui.actionPreview, SIGNAL(triggered()), this, SLOT(onShowPreview()));
 	connect(ui.actionProcessed_RAW, SIGNAL(triggered()), this, SLOT(onShowProcessedRaw()));
+	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
 
 	connect(ui.action_Run, SIGNAL(triggered()), this, SLOT(onRun()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
