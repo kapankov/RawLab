@@ -5,30 +5,28 @@
 #include "histogram_widget.h"
 
 HistogramWidget::HistogramWidget(QWidget* parent)
-	: m_img(nullptr)
 {
 
 }
 
 void HistogramWidget::onImageChanged(RgbBuff* buff)
 {
-	m_img = buff;
-	if (m_img && m_img->m_buff)
+	if (buff && buff->m_buff)
 	{
 		// создаем гистограмму
-		m_img->alloc_histogram();
-		size_t stride = static_cast<size_t>(m_img->m_width) * 3;
+		buff->alloc_histogram();
+		size_t stride = static_cast<size_t>(buff->m_width) * 3;
 		if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 
-		for (size_t h = 0, hcount = static_cast<size_t>(m_img->m_height); h < hcount; ++h)
-			for (size_t w = 0, wcount = static_cast<size_t>(m_img->m_width); w < wcount; ++w)
+		for (size_t h = 0, hcount = static_cast<size_t>(buff->m_height); h < hcount; ++h)
+			for (size_t w = 0, wcount = static_cast<size_t>(buff->m_width); w < wcount; ++w)
 			{
 				size_t n = h * stride + w * 3;
 				for (size_t c = 0; c < 3; ++c)
 				{
-					const unsigned char& k = m_img->m_buff[n + c];
-					m_img->m_histogram[c][k]++;
-					if (!m_img->m_histogram[c][k]) m_img->m_histogram[c][k]--; // на случай переполнения
+					const unsigned char& k = buff->m_buff[n + c];
+					buff->m_histogram[c][k]++;
+					if (!buff->m_histogram[c][k]) buff->m_histogram[c][k]--; // на случай переполнения
 				}
 			}
 
@@ -40,24 +38,24 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 
 		painter.setCompositionMode(QPainter::CompositionMode_Plus);
 
-		size_t count = m_img->m_histogram[0].size();
+		size_t count = buff->m_histogram[0].size();
 		// найдем максимум без последнего элемента (света) во всех трех каналах
 		double maxh = std::max(
 			std::max(
-				*std::max_element(m_img->m_histogram[0].begin(), m_img->m_histogram[0].end() - 1),
-				*std::max_element(m_img->m_histogram[1].begin(), m_img->m_histogram[1].end() - 1)
+				*std::max_element(buff->m_histogram[0].begin(), buff->m_histogram[0].end() - 1),
+				*std::max_element(buff->m_histogram[1].begin(), buff->m_histogram[1].end() - 1)
 			),
-			*std::max_element(m_img->m_histogram[2].begin(), m_img->m_histogram[2].end() - 1)
+			*std::max_element(buff->m_histogram[2].begin(), buff->m_histogram[2].end() - 1)
 		);
 
 		m_stat = QString(tr("max = %1\n\nOE:\nR = %2\nG = %3\nB = %4\n\nUE:\nR = %5\nG = %6\nB = %7")).arg(
 			QString::number(static_cast<int>(maxh)),
-			QString::number(m_img->m_histogram[0].at(255)),
-			QString::number(m_img->m_histogram[1].at(255)),
-			QString::number(m_img->m_histogram[2].at(255)),
-			QString::number(m_img->m_histogram[0].at(0)),
-			QString::number(m_img->m_histogram[1].at(0)),
-			QString::number(m_img->m_histogram[2].at(0)));
+			QString::number(buff->m_histogram[0].at(255)),
+			QString::number(buff->m_histogram[1].at(255)),
+			QString::number(buff->m_histogram[2].at(255)),
+			QString::number(buff->m_histogram[0].at(0)),
+			QString::number(buff->m_histogram[1].at(0)),
+			QString::number(buff->m_histogram[2].at(0)));
 		// прорисовать наложение каналов
 		for (size_t c = 0; c < 3; ++c)
 		{
@@ -75,7 +73,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 			};
 			for (size_t i = 0; i < count; ++i)
 			{
-				double value = m_img->m_histogram[c].at(i) / maxh;
+				double value = buff->m_histogram[c].at(i) / maxh;
 				painter.drawLine(QPoint(hr.left() + static_cast<int>(i), hr.bottom()), QPoint(hr.left() + static_cast<int>(i), hr.bottom() - value * (hr.height())));
 			}
 		}
@@ -110,7 +108,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 			QPoint prev(0, 0);
 			for (size_t i = 0; i < count; ++i)
 			{
-				double value = m_img->m_histogram[c].at(i) / maxh;
+				double value = buff->m_histogram[c].at(i) / maxh;
 				QPoint next(hr.left() + i, hr.bottom() - (value * (hr.height())));
 				painter.drawLine(prev, next);
 				prev = next;

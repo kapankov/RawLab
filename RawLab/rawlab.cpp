@@ -96,13 +96,12 @@ RawLab::RawLab(QWidget *parent)
 	m_lr = std::make_unique<LibRawEx>();
 
 	m_settings.setPath(QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
-	m_settings.setDefaultValue(QString("lastdir").toStdWString(),
-		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdWString());
-	m_lastDir = QString::fromStdWString(m_settings.getValue(QString("lastdir").toStdWString()));
-	m_settings.setDefaultValue(QString("autogreen2").toStdWString(),
-		QString("true").toStdWString());
-	m_settings.setDefaultValue(QString("tiff").toStdWString(),
-		QString("false").toStdWString());
+	m_settings.setDefaultValue(std::string("lastdir"),
+		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
+	m_lastDir = QString::fromStdString(m_settings.getValue(std::string("lastdir")));
+	m_settings.setDefaultValue(std::string("autogreen2"), std::string("true"));
+	m_settings.setDefaultValue(std::string("tiff"), std::string("true"));
+	m_settings.setDefaultValue(std::string("bps"), std::string("8"));
 
 /*	m_settings.setDefaultValue(QString("minfilter").toStdWString(), 
 		QString("LINEAR").toStdWString());
@@ -161,7 +160,7 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderWBGreen2->setDefaultValue(1.0);
 	ui.sliderWBGreen2->setValue(1.0);
 
-	ui.AutoGreen2->setChecked(m_settings.getValue(QString("autogreen2").toStdWString()).compare(QString("true").toStdWString()) == 0);
+	ui.AutoGreen2->setChecked(m_settings.getValue(std::string("autogreen2")).compare(std::string("true")) == 0);
 
 	ui.sliderExposure->setLabel(tr("Exposure:"));
 	ui.sliderExposure->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
@@ -305,7 +304,7 @@ RawLab::~RawLab()
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	m_settings.setValue(QString("lastdir").toStdWString(), m_lastDir.toStdWString());
+	m_settings.setValue(std::string("lastdir"), m_lastDir.toStdString());
 
 	delete m_plblInfo;
 	delete m_plblScale;
@@ -363,10 +362,12 @@ void RawLab::setProgress(const QString & text)
 
 void RawLab::ExtractProcessedRaw()
 {
+	constexpr bool force8bit = false; // можно заставить LibRaw копировать 8-битное изображение (true)
 	int width, height, colors, bps;
 	size_t stride;
 	m_lr->get_mem_image_format(&width, &height, &colors, &bps);
-	stride = static_cast<size_t>(width)* static_cast<size_t>(colors);
+	if (force8bit) bps = 8;
+	stride = static_cast<size_t>(width) * static_cast<size_t>(colors) * (bps/8);
 	if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 
 	m_pRawBuff = std::make_unique<RgbBuff>();
@@ -375,14 +376,16 @@ void RawLab::ExtractProcessedRaw()
 	libraw_data_t& imgdata = m_lr->imgdata;
 	libraw_output_params_t& params = imgdata.params;
 	int ibps = params.output_bps;
-	params.output_bps = 8;
+	if (force8bit)
+		params.output_bps = 8;
 	m_lr->copy_mem_image(m_pRawBuff->m_buff, static_cast<int>(stride), 0);
-
+	if (force8bit)
+		params.output_bps = ibps;
 	// зеркально перевернуть
 	size_t halfheight = static_cast<size_t>(height) >> 1; //  = height/2
 	// #pragma omp parallel for никакого профита здесь
 	for (size_t row = 0; row < halfheight; ++row)
-		for (size_t col = 0; col < stride; col += sizeof(unsigned int))
+		for (size_t col = 0; col < stride; col += SIZEOFDWORD)
 			std::swap(*reinterpret_cast<unsigned int*>(&m_pRawBuff->m_buff[stride * row + col]),
 				*reinterpret_cast<unsigned int*>(&m_pRawBuff->m_buff[stride * (static_cast<size_t>(height) - row - 1) + col]));
 
@@ -471,7 +474,7 @@ void RawLab::setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb)
 		ui.cmbWhiteBalance->addItem(x.name);
 	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset(/*m_lastWBPreset*/));
 
-	bool  defAutoGreen2 = m_settings.getValue(QString("autogreen2").toStdWString()).compare(QString("true").toStdWString()) == 0;
+	bool  defAutoGreen2 = m_settings.getValue(std::string("autogreen2")).compare(std::string("true")) == 0;
 	if (defAutoGreen2)
 		updateGreen2Div();
 	setAutoGreen2(defAutoGreen2);
@@ -1347,7 +1350,9 @@ void RawLab::onRun()
 		{
 			libraw_output_params_t &params = m_lr->imgdata.params;
 			// tiff or ppm/pgm output format
-			params.output_tiff = m_settings.getValue(QString("tiff").toStdWString()).compare(QString("true").toStdWString()) == 0 ? 1 : 0;
+			params.output_tiff = m_settings.getValue(std::string("tiff")).compare(std::string("true")) == 0 ? 1 : 0;
+			// 16 or 8 bit support
+			params.output_bps = m_settings.getValue(std::string("bps")).compare(std::string("16")) == 0 ? 16 : 8;
 			// баланс белого
 			float(&mul)[4] = params.user_mul;
 			mul[0] = 0.0;

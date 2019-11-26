@@ -3,22 +3,19 @@
 
 #include "stdafx.h"
 
-std::unique_ptr<xmlChar[]> wstringToXmlChar(const std::wstring& w)
+std::unique_ptr<xmlChar[]> stringToXmlChar(const std::string& s)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> cnv;
-	std::string s = cnv.to_bytes(w);
 	std::unique_ptr<xmlChar[]> r = std::make_unique<xmlChar[]>(s.length() + 1);
 	memcpy(r.get(), s.c_str(), s.length());
 	return r;
 }
 
-std::wstring xmlCharToWstring(const xmlChar* value)
+std::string xmlCharToString(const xmlChar* value)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> cnv;
-	return cnv.from_bytes(const_cast<const char*>(reinterpret_cast<char*>(const_cast<xmlChar*>(value))));
+	return std::string(reinterpret_cast<char*>(const_cast<xmlChar*>(value)));
 }
 
-void CSettings::setDefaultValue(const std::wstring & name, const std::wstring & value)
+void CSettings::setDefaultValue(const std::string & name, const std::string & value)
 {
 //	m_settingsmap.emplace(std::make_pair(name, value));
 	m_settingsmap[name] = value;
@@ -39,11 +36,11 @@ void CSettings::setPath(const std::string& path)
 		// создать файл настроек по умолчанию
 		if (isnew)
 		{
-			std::map<std::wstring, std::wstring>::iterator it;
+			std::map<std::string, std::string>::iterator it;
 			for (it = m_settingsmap.begin(); it != m_settingsmap.end(); ++it)
 			{
-				std::unique_ptr<xmlChar[]> n = wstringToXmlChar(it->first);
-				std::unique_ptr<xmlChar[]> v = wstringToXmlChar(it->second);
+				std::unique_ptr<xmlChar[]> n = stringToXmlChar(it->first);
+				std::unique_ptr<xmlChar[]> v = stringToXmlChar(it->second);
 				setValue(doc, n.get(), v.get());
 			}
 		}
@@ -77,13 +74,13 @@ void CSettings::setValue(const xmlDocPtr doc, const xmlChar* nodeName, const xml
 	}
 }
 
-bool CSettings::setValue(const std::wstring& name, const std::wstring& value)
+bool CSettings::setValue(const std::string& name, const std::string& value)
 {
 	if (name.empty() || value.empty()) return false;
 
-	std::unique_ptr<xmlChar[]> nodeName = wstringToXmlChar(name);
+	std::unique_ptr<xmlChar[]> nodeName = stringToXmlChar(name);
 	if (!nodeName) return false;
-	std::unique_ptr<xmlChar[]> nodeContent = wstringToXmlChar(value);
+	std::unique_ptr<xmlChar[]> nodeContent = stringToXmlChar(value);
 	if (!nodeContent) return false;
 
 	xmlDocPtr doc = xmlParseFile(m_path.c_str());
@@ -98,14 +95,14 @@ bool CSettings::setValue(const std::wstring& name, const std::wstring& value)
 	return true;
 }
 
-std::wstring CSettings::getValue(const std::wstring & name)
+std::string CSettings::getValue(const std::string & name)
 {
 	if (!name.empty())
 	{
-		std::unique_ptr<xmlChar[]> nodeName = wstringToXmlChar(name);
+		std::unique_ptr<xmlChar[]> nodeName = stringToXmlChar(name);
 		if (nodeName)
 		{
-			std::wstring r;
+			std::string r;
 			xmlDocPtr doc = xmlParseFile(m_path.c_str());
 			if (doc)
 			{
@@ -118,7 +115,7 @@ std::wstring CSettings::getValue(const std::wstring & name)
 						{
 							if (xmlChar* nodeContent = xmlNodeListGetString(doc, curNode->xmlChildrenNode, 1))
 							{
-								r = xmlCharToWstring(nodeContent);
+								r = xmlCharToString(nodeContent);
 								xmlFree(nodeContent);
 							}
 							break;
@@ -136,5 +133,5 @@ std::wstring CSettings::getValue(const std::wstring & name)
 			return r;
 		}
 	}
-	return std::wstring();
+	return std::string();
 }
