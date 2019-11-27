@@ -142,7 +142,7 @@ void HistogramWidget::paintEvent(QPaintEvent* event)
 		painter.setCompositionMode(QPainter::CompositionMode_Lighten);
 		painter.drawImage(r.topLeft()+=QPoint(1,1), *m_imm);
 		// статистика
-		r.adjust(m_Columns + 4, 2, -2, - 2);
+		r.adjust(static_cast<int>(m_Columns) + m_StatisticsIndent, 2, -2, - 2);
 		painter.setPen(QColor::fromRgb(0xA0, 0xA0, 0xA0));
 
 		painter.drawText(r, Qt::AlignLeft | Qt::AlignTop, m_stat);

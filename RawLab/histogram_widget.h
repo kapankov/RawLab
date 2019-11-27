@@ -10,6 +10,7 @@ class HistogramWidget : public QWidget
 
 	const size_t m_Columns = 256;
 	const size_t m_HorzLines = 4; // кол-во горизонтальных линий на гистограмме
+	const int m_StatisticsIndent = 6;
 	std::unique_ptr<QImage> m_imm;
 	QString m_stat; // статистика
 public:
