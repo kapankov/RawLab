@@ -101,7 +101,7 @@ RawLab::RawLab(QWidget *parent)
 	m_lastDir = QString::fromStdString(m_settings.getValue(std::string("lastdir")));
 	m_settings.setDefaultValue(std::string("autogreen2"), std::string("true"));
 	m_settings.setDefaultValue(std::string("tiff"), std::string("true"));
-	m_settings.setDefaultValue(std::string("bps"), std::string("8"));
+	m_settings.setDefaultValue(std::string("bps"), std::string("16"));
 
 /*	m_settings.setDefaultValue(QString("minfilter").toStdWString(), 
 		QString("LINEAR").toStdWString());
@@ -391,6 +391,9 @@ void RawLab::ExtractProcessedRaw()
 
 	m_pRawBuff->m_width = width;
 	m_pRawBuff->m_height = height;
+	m_pRawBuff->m_bits = force8bit ? 8 : params.output_bps;
+	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
+	m_pRawBuff->m_colors = colors;
 }
 
 void RawLab::RawProcess()
@@ -1230,13 +1233,13 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 				// Kodak DCS Pro SLR/n (DCR)
 				// Kodak DC50 (KDC)
 				// Nikon D1 (NEF)
-				BmpBuff buff;
+				RgbBuff buff;
 				buff.m_buff = mem_thumb->data;
 				buff.m_width = mem_thumb->width;
 				buff.m_height = mem_thumb->height;
 				buff.m_bits = mem_thumb->bits;
 				buff.m_colors = mem_thumb->colors;
-				result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromBitmap(&buff, true)));
+				result = ui.openGLWidget->setRgbBuff(std::move(GetAlignedBufFromBitmap(&buff, true)));
 				buff.m_buff = nullptr; // ќб€зательно! »наче будет освобождение пам€ти через delete
 			}
 			else throw RawLabException(QString(tr("Unknown preview image format")).toStdString());

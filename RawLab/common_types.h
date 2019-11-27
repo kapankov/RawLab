@@ -25,16 +25,18 @@ public:
 
 using histogramvec = std::vector<unsigned int>;
 
-struct ImgBuff
+struct RgbBuff
 {
 	unsigned char* m_buff;
 	int m_width;
 	int m_height;
+	unsigned char m_bits;	// только кратный 8
+	unsigned char m_colors;
 
 	histogramvec m_histogram[3];
 
-	ImgBuff() : m_buff(nullptr), m_width(0), m_height(0) {}
-	~ImgBuff() { delete[] m_buff; }
+	RgbBuff() : m_buff(nullptr), m_width(0), m_height(0), m_bits(8), m_colors(3) {}
+	~RgbBuff() { delete[] m_buff; }
 	void alloc_histogram()
 	{
 		for (int i = 0; i < 3; ++i)
@@ -43,15 +45,6 @@ struct ImgBuff
 	}
 };
 
-struct RgbBuff: public ImgBuff
-{
-};
-
-struct BmpBuff : public ImgBuff
-{
-	unsigned char m_bits;	// только кратный 8
-	unsigned char m_colors;
-	BmpBuff() : m_bits(8), m_colors(3) {}
-};
+using RgbBuffPtr = std::unique_ptr<RgbBuff>;
 
 #endif

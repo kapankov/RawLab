@@ -13,18 +13,25 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 {
 	if (buff && buff->m_buff)
 	{
+		bool is16bit = buff->m_bits == 16;
 		// создаем гистограмму
 		buff->alloc_histogram();
-		size_t stride = static_cast<size_t>(buff->m_width) * 3;
+		size_t stride = static_cast<size_t>(buff->m_width) * 3 * buff->m_bits/8;
 		if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 
 		for (size_t h = 0, hcount = static_cast<size_t>(buff->m_height); h < hcount; ++h)
 			for (size_t w = 0, wcount = static_cast<size_t>(buff->m_width); w < wcount; ++w)
 			{
-				size_t n = h * stride + w * 3;
+				size_t n = h * stride + w * 3 * buff->m_bits / 8;
 				for (size_t c = 0; c < 3; ++c)
 				{
-					const unsigned char& k = buff->m_buff[n + c];
+					unsigned char k = 0;
+					if (is16bit)
+					{
+						k = (*reinterpret_cast<unsigned short*>(&buff->m_buff[n + c * buff->m_bits / 8])) >> 8;
+					}
+					else
+						k = buff->m_buff[n + c];
 					buff->m_histogram[c][k]++;
 					if (!buff->m_histogram[c][k]) buff->m_histogram[c][k]--; // на случай переполнени€
 				}

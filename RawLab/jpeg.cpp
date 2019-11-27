@@ -18,7 +18,7 @@ RgbBuffPtr GetBufFromJpeg(void* pBuff, unsigned long ulSize, bool mirror/*, BOOL
 	JDIMENSION ulDwAlgnRowSize = cinfo.output_width * 3;
 	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += SIZEOFDWORD - (ulDwAlgnRowSize & 3);
 
-	auto ptr = std::unique_ptr<RgbBuff>(new RgbBuff());
+	auto ptr = std::make_unique<RgbBuff>();
 	ptr->m_buff = new unsigned char[static_cast<size_t>(ulDwAlgnRowSize) * static_cast<size_t>(cinfo.output_height)];
 
 	int row_stride = cinfo.output_width * cinfo.output_components;
