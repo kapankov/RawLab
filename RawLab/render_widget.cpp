@@ -59,7 +59,7 @@ bool RenderWidget::UpdateImage()
 			glTexImage2D(
 				GL_TEXTURE_2D, 0,
 				GL_RGB8, m_pImgBuff->m_width, m_pImgBuff->m_height, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, m_pImgBuff->m_buff);
+				GL_RGB, m_pImgBuff->m_bits==8 ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT, m_pImgBuff->m_buff);
 			//glGenerateMipmap(GL_TEXTURE_2D);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);	// GL_LINEAR_MIPMAP_LINEAR
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// GL_LINEAR
