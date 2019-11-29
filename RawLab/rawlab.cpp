@@ -1230,7 +1230,11 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 		{
 			if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
 			{
-				result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true)));
+				// определим настройку ColorSpace для камер Canon (остальные камеры не изучены)
+				bool isAdobe = false;
+				if (pLr->imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Canon)
+					isAdobe = pLr->imgdata.makernotes.canon.ColorSpace == 2;
+				result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true, isAdobe)));
 			}
 			else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
 			{
