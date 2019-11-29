@@ -803,7 +803,12 @@ void RawLab::openFile(const QString& filename)
 				return;
 			}
 		}
-		m_plblState->setText(m_filename);
+		m_plblState->setText(check_file.dir().path()
+#if defined WIN32 || defined WIN64
+			.replace(QChar('/'), QChar('\\'))
+#endif
+		);
+		setWindowTitle(QString("RawLab [") + check_file.fileName() + QString("]"));
 	}
 }
 
