@@ -29,10 +29,10 @@ public:
 		 * Fix this by overloading the validate() operator.
 		 */
 		const QValidator::State origState = QDoubleValidator::validate(input, pos);
-		double t = top();
-		double b = bottom();
-		double i = QLocale(QLocale::English, QLocale::UnitedStates).toDouble(input); // not QLocale::system()
-		if ((origState == QValidator::Intermediate) && (i > t || i < b))
+		double tp = top();
+		double bm = bottom();
+		double inp = QLocale(QLocale::English, QLocale::UnitedStates).toDouble(input); // not QLocale::system()
+		if ((origState == QValidator::Intermediate) && (inp > tp || inp < bm))
 			return QValidator::Invalid;
 		else if ((origState == QValidator::Acceptable) && input.contains(','))
 			return QValidator::Invalid;
@@ -49,7 +49,7 @@ public:
 #define KNOBWDTH 11
 #define KNOBHGTH 10
 
-SliderWidget::SliderWidget(QWidget* parent) : 
+SliderWidget::SliderWidget(QWidget* /*parent*/) : 
 	m_mode(smStandard)
 	, m_value(0.0)
 	, m_defvalue(0.0)
@@ -200,7 +200,7 @@ void SliderWidget::mousePressEvent(QMouseEvent * event)
 	}
 }
 
-void SliderWidget::mouseReleaseEvent(QMouseEvent * event)
+void SliderWidget::mouseReleaseEvent(QMouseEvent* /*event*/)
 {
 	m_isCaptured = false;
 }
@@ -374,7 +374,7 @@ void SliderWidget::onTextEdited(const QString & text)
 	}
 }
 
-void SliderWidget::onContextMenu(const QPoint & pos)
+void SliderWidget::onContextMenu(const QPoint&/* pos*/)
 {
 /*	if (!m_editor)
 	{
@@ -451,7 +451,7 @@ bool SliderWidget::event(QEvent * event)
 	return QWidget::event(event);
 }
 
-void SliderWidget::paintEvent(QPaintEvent* event)
+void SliderWidget::paintEvent(QPaintEvent* /*event*/)
 {
 //	QWidget::paintEvent(event); // draws the background
 

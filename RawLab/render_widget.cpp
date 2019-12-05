@@ -11,6 +11,7 @@ RenderWidget::RenderWidget(QWidget * parent)
 	, m_dblZoom(.0)
 	, m_ExtraOffset(0.0)
 	, m_EmptyLabel(tr("No image"))
+	, m_CmsState(false)
 {
 	resetCenter();
 }
@@ -22,7 +23,7 @@ RenderWidget::~RenderWidget()
 bool RenderWidget::setRgbBuff(RgbBuffPtr ptr)
 {
 	m_pImgBuff = std::move(ptr);
-	//
+	// сообщить об изменении картинки (например, для создания гистограммы в приложении)
 	emit imageChanged(m_pImgBuff.get());
 	return UpdateImage();
 }
@@ -32,7 +33,35 @@ void RenderWidget::setEmptyLabel(QString label)
 	m_EmptyLabel = label;
 }
 
-bool RenderWidget::UpdateImage()
+void RenderWidget::enableCms(bool enable)
+{
+	m_CmsState = enable;
+	if (m_CmsState)
+		setMonitorProfile(QString::fromStdString(GetMonitorProfile(reinterpret_cast<HWND>(winId()))));
+	// update something
+	UpdateImage(false);
+}
+
+bool RenderWidget::isCmsEnabled() const noexcept
+{
+	return m_CmsState;
+}
+
+QString RenderWidget::getMonitorProfile() const
+{
+	return m_MonitorProfilePath;
+}
+
+void RenderWidget::setMonitorProfile(QString profile)
+{
+	if (m_MonitorProfilePath.compare(profile))
+	{
+		m_MonitorProfilePath = profile;
+		emit monitorProfileChanged(m_CmsState);
+	}
+}
+
+bool RenderWidget::UpdateImage(bool resetZoom)
 {
 	bool result = false;
 	if (m_tex_id)
@@ -42,9 +71,11 @@ bool RenderWidget::UpdateImage()
 		// например, в релизе некорректно работает QPainter::drawText
 		m_tex_id = 0;
 	}
-
-	m_dblZoom = .0;
-	m_isCenter = true;
+	if (resetZoom)
+	{
+		m_dblZoom = .0;
+		m_isCenter = true;
+	}
 
 	setMouseTracking(false);
 
@@ -52,14 +83,53 @@ bool RenderWidget::UpdateImage()
 	{
 		if (m_pImgBuff->m_buff)
 		{
+			RgbBuffPtr	pCmsImgBuff;
+			GLsizei width = static_cast<GLsizei>(m_pImgBuff->m_width);
+			GLsizei height = static_cast<GLsizei>(m_pImgBuff->m_height);
+			GLvoid* pixels = m_pImgBuff->m_buff;
+			GLenum type = m_pImgBuff->m_bits == 8 ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT;
+			if (m_CmsState)
+			{
+				// создать буфер для CMS
+				pCmsImgBuff = m_pImgBuff->copy();
+				if (pCmsImgBuff->m_params && pCmsImgBuff->m_params->m_iColorSpace == 2 && pCmsImgBuff->m_params->output_profile.compare("PREVIEW")==0)
+				{
+					if (cmsHPROFILE hInProfile = cmsCreateAdobeRGBProfile())
+					{
+						TransformToMonitorColor(
+							pCmsImgBuff->m_buff,
+							pCmsImgBuff->m_width,
+							pCmsImgBuff->m_height,
+							pCmsImgBuff->m_bits,
+							hInProfile,
+							const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()));
+						cmsCloseProfile(hInProfile);
+					}
+				}
+				else
+					TransformToMonitorColor(
+						pCmsImgBuff->m_buff,
+						pCmsImgBuff->m_width,
+						pCmsImgBuff->m_height,
+						pCmsImgBuff->m_bits,
+						const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()),
+						pCmsImgBuff->m_params ? pCmsImgBuff->m_params->m_iColorSpace : 1,
+						pCmsImgBuff->m_params && abs(pCmsImgBuff->m_params->gamm[0]) > DBL_EPSILON ? pCmsImgBuff->m_params->gamm : nullptr,
+						pCmsImgBuff->m_params && pCmsImgBuff->m_params->m_iColorSpace == 0 && abs(pCmsImgBuff->m_params->cam_xyz[0][0]) > FLT_EPSILON ? pCmsImgBuff->m_params->cam_xyz : nullptr,
+						pCmsImgBuff->m_params && pCmsImgBuff->m_params->m_iColorSpace == -1 ? pCmsImgBuff->m_params->output_profile.c_str() : nullptr
+					);
+				::OutputDebugString((m_MonitorProfilePath + "\n").toStdWString().c_str());
+				pixels = pCmsImgBuff->m_buff;
+			}
+
 			glGenTextures(1, &m_tex_id);
 			glBindTexture(GL_TEXTURE_2D, m_tex_id);
 			//	GLenum err_code = glGetError();
 			// glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // по умолчанию выравнивание 32-битное
 			glTexImage2D(
 				GL_TEXTURE_2D, 0,
-				GL_RGB8, m_pImgBuff->m_width, m_pImgBuff->m_height, 0,
-				GL_RGB, m_pImgBuff->m_bits==8 ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT, m_pImgBuff->m_buff);
+				GL_RGB8, width, height, 0,
+				GL_RGB, type, pixels);
 			//glGenerateMipmap(GL_TEXTURE_2D);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);	// GL_LINEAR_MIPMAP_LINEAR
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// GL_LINEAR
@@ -69,12 +139,13 @@ bool RenderWidget::UpdateImage()
 			setMouseTracking(true);
 		}
 		// если размер изображения меньше меньше окна, не растягивать, оставить масштаб 100%
-		if (m_pImgBuff->m_width < width() && m_pImgBuff->m_height < height())
+		if (resetZoom && m_pImgBuff->m_width < width() && m_pImgBuff->m_height < height())
 			m_dblZoom = 1.0;
 		result = true;
 	}
 
-	onZoomEvent();
+	if (resetZoom)
+		onZoomEvent();
 	update();
 
 	return result;
@@ -177,7 +248,7 @@ void RenderWidget::mousePressEvent(QMouseEvent * event)
 	}
 }
 
-void RenderWidget::mouseReleaseEvent(QMouseEvent * event)
+void RenderWidget::mouseReleaseEvent(QMouseEvent* /*event*/)
 {
 //	QMessageBox::information(this, "Mouse event", "mouseReleaseEvent", QMessageBox::Ok);
 }
@@ -287,13 +358,13 @@ void RenderWidget::wheelEvent(QWheelEvent * event)
 	}
 }
 
-void RenderWidget::enterEvent(QEvent* event)
+void RenderWidget::enterEvent(QEvent* /*event*/)
 {
 	if (m_pImgBuff)
 		onMousePosChanged(mapFromGlobal(QCursor::pos()));
 }
 
-void RenderWidget::leaveEvent(QEvent* event)
+void RenderWidget::leaveEvent(QEvent* /*event*/)
 {
 	emit pointerChanged(-1, -1);
 }
@@ -408,15 +479,17 @@ QPointF RenderWidget::getCurrentCenter()
 	qreal w = zoom * m_pImgBuff->m_width;
 	qreal h = zoom * m_pImgBuff->m_height;
 
-	qreal _w = width();
-	qreal _h = height();
-
 	if (w > width())
 		r.setX((0.5 * width() - m_ScrollOffset.x()) / zoom);
 	if (h > height())
 		r.setY((0.5 * height() - m_ScrollOffset.y()) / zoom);
 
 	return r;
+}
+
+int RenderWidget::getMonitorNumber()
+{
+	return QApplication::desktop()->screenNumber(this);;
 }
 
 void RenderWidget::onZoomIn()

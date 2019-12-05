@@ -1,8 +1,10 @@
 #pragma once
 
+
 #define _USE_MATH_DEFINES
 #include <math.h>	// to prevent Qt macro redefinitions
 
+#include <cassert>
 #include <string>
 #include <codecvt>
 #include <map>
@@ -26,6 +28,7 @@
 #pragma warning(pop)
 
 #include "common_types.h"
+#include "cms.h"
 #include "color_math.h"
 #include "jpeg.h"
 #include "bitmap.h"

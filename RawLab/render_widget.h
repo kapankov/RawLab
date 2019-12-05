@@ -51,7 +51,7 @@ class RenderWidget : public QOpenGLWidget
 	const double m_MaxZoomFactor = 20.0;
 
 	GLuint	m_tex_id;	// OpenGL texture id
-	RgbBuffPtr	m_pImgBuff;	// image buffer with sizes
+	RgbBuffPtr	m_pImgBuff;	// image buffer
 
 	bool m_isCenter; // флаг - изображение по центру
 	// координаты сдвига изображения
@@ -71,6 +71,9 @@ class RenderWidget : public QOpenGLWidget
 	qreal	m_ExtraOffset;
 	// надпись в случае "пустого" m_pImgBuff
 	QString	m_EmptyLabel;
+	// Color Management System state (on / off)
+	bool m_CmsState;
+	QString m_MonitorProfilePath; // путь к файлу профиля монитора
 	
 public:
 	RenderWidget(QWidget *parent = 0);
@@ -78,6 +81,10 @@ public:
 
 	bool setRgbBuff(RgbBuffPtr ptr);
 	void setEmptyLabel(QString label);
+	void enableCms(bool enable);
+	bool isCmsEnabled() const noexcept;
+	QString getMonitorProfile() const;
+	void setMonitorProfile(QString profile);
 
 signals:
 	void zoomChanged(int prc);
@@ -86,6 +93,7 @@ signals:
 	void scrollSizeChanged(int x, int y);
 	void pointerChanged(int x, int y);
 	void imageChanged(RgbBuff* buff);
+	void monitorProfileChanged(bool enable);
 
 public slots:
 	void onZoomIn();
@@ -104,7 +112,7 @@ public slots:
 	void onMoveDown();
 protected:
 
-	bool UpdateImage();
+	bool UpdateImage(bool resetZoom=true);
 	void initializeGL() override;
 	void paintGL() override;
 	void resizeGL(int width, int height) override;
@@ -126,6 +134,8 @@ protected:
 	// for parent scroll
 	void setOffset(int x, int y);
 	QPointF getCurrentCenter();
+
+	int getMonitorNumber();
 };
 
 #endif

@@ -77,12 +77,14 @@ private:
 	bool isCancel(); // проверить, нужно ли остановить поток обработки RAW
 	void addPropertiesSection(const QString& name);
 	void addPropertiesItem(const QString& name, const QString& value);
+	void setPropertiesItem(const QString& name, const QString& value);
 	void fillProperties(const LibRawEx &lr);
 	// извлечь из открытого RAW-файла превью и показать его
 	bool ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr);
 	// Получение обработанного изображения из LibRaw в m_pRawBuff
 	void ExtractProcessedRaw();
 	void RawProcess();
+	void UpdateCms(bool enable);
 
 	void setWBSliders(const float(&mul)[4], bool setDefault = true);
 	// обновлять WB контролы только после распаковки RAW
@@ -104,6 +106,7 @@ public slots:
 	void onOpen();
 	void onSave();
 	void onSavePreview();
+	void onCms();
 	void onExit();
 	void onRun();
 	void onAbout();
@@ -113,6 +116,8 @@ public slots:
 	void onShowPreview();
 	// показать результат RAW-обработки
 	void onShowProcessedRaw();
+	// сменился профиль монитора
+	void onMonitorProfileChanged(bool enable);
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
 	void onProcessed(QString message);

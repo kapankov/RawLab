@@ -38,7 +38,7 @@ QString outputProfiles[] = {
 	"Adobe RGB (1998)",
 	"WideGamut D65",
 	"ProPhoto D65",
-	"XYZ",
+	"XYZ D65",
 	"ACES"
 };
 
@@ -102,11 +102,10 @@ RawLab::RawLab(QWidget *parent)
 	m_settings.setDefaultValue(std::string("autogreen2"), std::string("true"));
 	m_settings.setDefaultValue(std::string("tiff"), std::string("true"));
 	m_settings.setDefaultValue(std::string("bps"), std::string("16"));
+	m_settings.setDefaultValue(std::string("cms"), std::string("1")); // CMS is On
 
-/*	m_settings.setDefaultValue(QString("minfilter").toStdWString(), 
-		QString("LINEAR").toStdWString());
-	m_settings.setDefaultValue(QString("magfilter").toStdWString(), 
-		QString("NEAREST").toStdWString());*/
+	bool  isCmsOn = m_settings.getValue(std::string("cms")).compare(std::string("1")) == 0;
+	UpdateCms(isCmsOn);
 
 	m_MoveLeft = new QShortcut(this);
 	m_MoveLeft->setKey(Qt::CTRL + Qt::Key_Left);
@@ -242,7 +241,9 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionSave_Preview, SIGNAL(triggered()), this, SLOT(onSavePreview()));
 	connect(ui.actionPreview, SIGNAL(triggered()), this, SLOT(onShowPreview()));
 	connect(ui.actionProcessed_RAW, SIGNAL(triggered()), this, SLOT(onShowProcessedRaw()));
+	connect(ui.actionCMS, SIGNAL(triggered()), this, SLOT(onCms()));
 	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
+	connect(ui.openGLWidget, SIGNAL(monitorProfileChanged(bool)), ui.histogram, SLOT(onMonitorProfileChanged(bool)));
 
 	connect(ui.action_Run, SIGNAL(triggered()), this, SLOT(onRun()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
@@ -294,6 +295,32 @@ RawLab::RawLab(QWidget *parent)
 	);
 	connect(ui.sliderGamma, SIGNAL(valueChanged(double)), this, SLOT(onGammaValueChanged(double)));
 	connect(ui.sliderSlope, SIGNAL(valueChanged(double)), this, SLOT(onSlopeValueChanged(double)));
+	connect(ui.cmbOutProfile, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		[=](int index) {
+			int i = 0;
+			switch (index)
+			{
+			case 0:
+			case 5:
+			case 6:
+				i = 3;
+				break;
+			case 1:
+				i = 1;
+				break;
+			case 2:
+			case 3:
+				i = 5;
+				break;
+			case 4:
+				i = 4;
+				break;
+			default:
+				return;
+			}
+			ui.cmbGammaCurve->setCurrentIndex(i);
+			ui.cmbGammaCurve->activated(i);
+		});
 }
 
 RawLab::~RawLab()
@@ -324,7 +351,9 @@ bool RawLab::setImageJpegFile(const QString &  filename)
 	file.open(QFile::ReadOnly);
 	if (uchar *memdata = file.map(0, file.size()))
 	{
-		result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromJpeg(memdata, file.size(), true)));
+		RgbBuffPtr rgbBuff = GetBufFromJpeg(memdata, file.size(), true);
+		// m_params is empty -> m_iColorSpace = 1
+		result = ui.openGLWidget->setRgbBuff(std::move(rgbBuff));
 		if (result)
 			m_filename = filename;
 		file.unmap(memdata);
@@ -391,9 +420,25 @@ void RawLab::ExtractProcessedRaw()
 
 	m_pRawBuff->m_width = width;
 	m_pRawBuff->m_height = height;
-	m_pRawBuff->m_bits = force8bit ? 8 : params.output_bps;
+	m_pRawBuff->m_bits = force8bit ? 8 : ibps;
 	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
 	m_pRawBuff->m_colors = colors;
+	if (m_lr->imgdata.params.output_color!=1)
+	{
+		m_pRawBuff->m_params = std::make_unique<CmsParams>();
+		if (m_lr->imgdata.params.output_profile)
+		{
+			m_pRawBuff->m_params->m_iColorSpace = -1;
+			m_pRawBuff->m_params->output_profile = m_lr->imgdata.params.output_profile;
+		}
+		else
+		{
+			m_pRawBuff->m_params->m_iColorSpace = m_lr->imgdata.params.output_color;
+			memcpy(m_pRawBuff->m_params->gamm, m_lr->imgdata.params.gamm, sizeof(m_lr->imgdata.params.gamm));
+			if (m_lr->imgdata.params.output_color == 0)
+				memcpy(m_pRawBuff->m_params->cam_xyz, m_lr->imgdata.color.cam_xyz, sizeof(m_lr->imgdata.color.cam_xyz));
+		}
+	}
 }
 
 void RawLab::RawProcess()
@@ -445,6 +490,22 @@ void RawLab::RawProcess()
 	emit setRun(true);
 }
 
+void RawLab::UpdateCms(bool enable)
+{
+	ui.openGLWidget->enableCms(enable);
+	if (enable)
+	{
+		ui.actionCMS->setIcon(QIcon(":/images/Resources/cmson.png"));
+		ui.actionCMS->setText("C&MS is On");
+	}
+	else
+	{
+		ui.actionCMS->setIcon(QIcon(":/images/Resources/cmsoff.png"));
+		ui.actionCMS->setText("C&MS is Off");
+	}
+	onMonitorProfileChanged(enable);
+}
+
 void RawLab::setWBSliders(const float(&mul)[4], bool setDefault)
 {
 	auto safewbmul = [](const float(&mul)[4], size_t n) -> float
@@ -467,7 +528,7 @@ void RawLab::setWBSliders(const float(&mul)[4], bool setDefault)
 	ui.sliderWBGreen2->update();
 }
 
-void RawLab::setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb)
+void RawLab::setWBControls(const float(&mul)[4], RAWLAB::WBSTATE /*wb*/)
 {
 	setWBSliders(mul);
 
@@ -500,7 +561,7 @@ void RawLab::setAutoGreen2(bool value)
 	ui.AutoGreen2->setChecked(value);
 }
 
-void RawLab::onGammaSlope(double gamma, double slope)
+void RawLab::onGammaSlope(double /*gamma*/, double /*slope*/)
 {
 	int decGamma = std::get<2>(ui.sliderGamma->getRange());
 	int decSlope = std::get<2>(ui.sliderSlope->getRange());
@@ -612,7 +673,6 @@ void RawLab::updateParamControls()
 	std::sort(WBCT_Coeffs.begin(), WBCT_Coeffs.end(),
 		[](const std::array<float, WBCT_Coeffs_size>& a, const std::array<float, WBCT_Coeffs_size>& b) -> bool { return a[0] < b[0]; });
 
-	size_t preset_count = m_wbpresets.size();
 	for (size_t i = 0; i < WBCT_Coeffs_count; ++i)
 	{
 		if (WBCT_Coeffs[i][0] > FLT_EPSILON)
@@ -859,6 +919,15 @@ void RawLab::onOpen()
 	}
 }
 
+void RawLab::onMonitorProfileChanged(bool enable)
+{
+	QString monProfile = ui.openGLWidget->getMonitorProfile();
+	if (enable)
+		ui.actionCMS->setToolTip(QString("%1\n%2").arg("CMS is On (F8)", monProfile.isEmpty() ? "No profile" : monProfile));
+	else
+		ui.actionCMS->setToolTip(QString("%1\n%2").arg("CMS is Off (F8)", monProfile.isEmpty() ? "No profile" : monProfile));
+}
+
 void RawLab::onZoomChanged(int prc)
 {
 	m_plblScale->setText(QString(tr("Scale: %1%")).arg(QString::number(prc)));
@@ -894,19 +963,19 @@ void RawLab::onSetRun(bool default)
 	{
 		ui.action_Run->setIcon(QIcon(":/images/Resources/play.png"));
 		ui.action_Run->setText("Run");
-		ui.action_Run->setToolTip("Run");
+		ui.action_Run->setToolTip("Run (F5)");
 		ui.action_Run->setShortcut(QKeySequence("F5"));
 	}
 	else
 	{
 		ui.action_Run->setIcon(QIcon(":/images/Resources/stop.png"));
 		ui.action_Run->setText("Cancel RAW processing");
-		ui.action_Run->setToolTip("Cancel RAW processing");
+		ui.action_Run->setToolTip("Cancel RAW processing (Esc)");
 		ui.action_Run->setShortcut(QKeySequence("Esc"));
 	}
 }
 
-void RawLab::onWBRedValueChanged(double value)
+void RawLab::onWBRedValueChanged(double /*value*/)
 {
 	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
 }
@@ -919,17 +988,17 @@ void RawLab::onWBGreenValueChanged(double value)
 	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
 }
 
-void RawLab::onWBBlueValueChanged(double value)
+void RawLab::onWBBlueValueChanged(double /*value*/)
 {
 	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
 }
 
-void RawLab::onWBGreen2ValueChanged(double value)
+void RawLab::onWBGreen2ValueChanged(double /*value*/)
 {
 	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
 }
 
-void RawLab::onAutoGreen2Clicked(bool checked)
+void RawLab::onAutoGreen2Clicked(bool /*checked*/)
 {
 	if (ui.AutoGreen2->checkState() == Qt::Checked)
 	{
@@ -955,7 +1024,7 @@ void RawLab::onAutoGreen2Clicked(bool checked)
 	}
 }
 
-void RawLab::onAutoBrightnessClicked(bool checked)
+void RawLab::onAutoBrightnessClicked(bool /*checked*/)
 {
 	bool enable = ui.AutoBrightness->checkState() == Qt::Unchecked;
 	ui.sliderBrightness->setEnabled(enable);
@@ -974,12 +1043,12 @@ void RawLab::onSlopeValueChanged(double value)
 	onGammaSlope(ui.sliderGamma->getValue(), value);
 }
 
-void RawLab::onInputProfilesDirChanged(const QString & path)
+void RawLab::onInputProfilesDirChanged(const QString& /*path*/)
 {
 	updateInputProfiles();
 }
 
-void RawLab::onOutputProfilesDirChanged(const QString & path)
+void RawLab::onOutputProfilesDirChanged(const QString& /*path*/)
 {
 	updateOutputProfiles();
 }
@@ -1016,6 +1085,27 @@ void RawLab::addPropertiesItem(const QString & name, const QString & value)
 	ui.propertiesView->setItem(rowIndex, 1, item2);
 }
 
+void RawLab::setPropertiesItem(const QString& name, const QString& value)
+{
+	QList<QTableWidgetItem*> itemList = ui.propertiesView->findItems(name, Qt::MatchFixedString | Qt::MatchCaseSensitive);
+	for (int i=0, count=itemList.count();i<count;++i)
+	{
+		if (itemList.at(i)->column() == 0)
+		{
+			QTableWidgetItem* item = ui.propertiesView->item(itemList.at(i)->row(), 1);
+			if (!item)
+			{
+				item = new QTableWidgetItem(value);
+				ui.propertiesView->setItem(itemList.at(i)->row(), 1, item);
+			}
+			else
+				item->setText(value);
+			item->setToolTip(value);
+			break;
+		}
+	}
+}
+
 void RawLab::fillProperties(const LibRawEx & lr)
 {
 	ui.propertiesView->clear();
@@ -1029,7 +1119,8 @@ void RawLab::fillProperties(const LibRawEx & lr)
 	if (lr.imgdata.color.model2[0])
 		addPropertiesItem(tr("Firmware"), QString(lr.imgdata.color.model2));
 	addPropertiesItem(tr("RAW count"), QString::number(lr.imgdata.idata.raw_count));
-	addPropertiesItem(tr("Sigma Foveon"), lr.imgdata.idata.is_foveon? tr("Yes") : tr("No"));
+	addPropertiesItem(tr("Preview format"), tr("Unknown"));
+	addPropertiesItem(tr("Sigma Foveon"), lr.imgdata.idata.is_foveon ? tr("Yes") : tr("No"));
 	if (lr.imgdata.idata.dng_version) addPropertiesItem(tr("DNG version"), QString::number(lr.imgdata.idata.dng_version));
 	addPropertiesItem(tr("Colors count"), QString::number(lr.imgdata.idata.colors));
 	addPropertiesItem(tr("Color description"), QString(lr.imgdata.idata.cdesc));
@@ -1225,16 +1316,46 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 	bool result = false;
 	if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
 	{
+		{
+			QString propName(tr("Preview format"));
+			switch (pLr->imgdata.thumbnail.tformat)
+			{
+			case LIBRAW_THUMBNAIL_JPEG:
+				setPropertiesItem(propName, tr("Jpeg"));
+				break;
+			case LIBRAW_THUMBNAIL_BITMAP:
+				setPropertiesItem(propName, tr("RGB bitmap (8-bit)"));
+				break;
+			case LIBRAW_THUMBNAIL_BITMAP16:
+				setPropertiesItem(propName, tr("RGB bitmap (16-bit)"));
+				break;
+			case LIBRAW_THUMBNAIL_LAYER:
+				setPropertiesItem(propName, tr("Layer"));
+				break;
+			case LIBRAW_THUMBNAIL_ROLLEI:
+				setPropertiesItem(propName, tr("Rollei"));
+				break;
+			default: //case LIBRAW_THUMBNAIL_UNKNOWN:
+				setPropertiesItem(propName, tr("Unknown"));
+				break;
+			}
+		}
+
 		int errcode = 0;
 		if (libraw_processed_image_t* mem_thumb = pLr->dcraw_make_mem_thumb(&errcode))
 		{
 			if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
 			{
+				RgbBuffPtr pRgbBuff = GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true);
 				// определим настройку ColorSpace для камер Canon (остальные камеры не изучены)
-				bool isAdobe = false;
 				if (pLr->imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Canon)
-					isAdobe = pLr->imgdata.makernotes.canon.ColorSpace == 2;
-				result = ui.openGLWidget->setRgbBuff(std::move(GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true, isAdobe)));
+				{
+					if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
+					pRgbBuff->m_params->m_iColorSpace = pLr->imgdata.makernotes.canon.ColorSpace == 2 ? 2 : 1;
+					if (pRgbBuff->m_params->m_iColorSpace == 2)
+						pRgbBuff->m_params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
+				}
+				result = ui.openGLWidget->setRgbBuff(std::move(pRgbBuff));
 			}
 			else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
 			{
@@ -1260,7 +1381,7 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 	{
 		// MINOLTA RD175 (MDC)
 		// нет превью, создать RgbBuffPtr с пустым буфером
-		result = ui.openGLWidget->setRgbBuff(std::unique_ptr<RgbBuff>(new RgbBuff()));
+		result = ui.openGLWidget->setRgbBuff(std::make_unique<RgbBuff>());
 	}
 	if (result) ui.actionPreview->setVisible(true); // при первом открытии файла активировать меню View->Preview
 	return result;
@@ -1303,14 +1424,16 @@ void RawLab::onSavePreview()
 			if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
 			{
 				QString tmpfilename; // имя файла по умолчанию при вызове диалога Save
-				QString filter(tr("Jpeg files (*.jpg)"));
+				QString filter(tr("All files (*.*)"));
 				QString ext = QFileInfo(m_filename).suffix();
 				switch (pLr->imgdata.thumbnail.tformat)
 				{
 				case LIBRAW_THUMBNAIL_JPEG:
+					filter = tr("Jpeg files (*.jpg)");
 					tmpfilename = ext.isEmpty() ? m_filename + QString(".jpg") : m_filename.replace(QRegularExpression(ext + "$"), QString("jpg"));
 					break;
 				case LIBRAW_THUMBNAIL_BITMAP:
+					filter = tr("Portable Pixelmap files (*.ppm)");
 					tmpfilename = ext.isEmpty() ? m_filename + QString(".ppm") : m_filename.replace(QRegularExpression(ext + "$"), QString("ppm"));
 					break;
 				default:
@@ -1336,6 +1459,11 @@ void RawLab::onSavePreview()
 				QString(tr("Preview not available")));
 		}
 	}
+}
+
+void RawLab::onCms()
+{
+	UpdateCms(!ui.openGLWidget->isCmsEnabled());
 }
 
 void RawLab::onExit()

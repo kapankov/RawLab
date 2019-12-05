@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "histogram_widget.h"
 
-HistogramWidget::HistogramWidget(QWidget* parent)
+HistogramWidget::HistogramWidget(QWidget* /* parent*/)
 {
 }
 
@@ -36,7 +36,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 				}
 			}
 
-		QRect hr(0, 0, m_Columns, rect().height() - 6);
+		QRect hr(0, 0, static_cast<int>(m_Columns), rect().height() - 6);
 		m_imm = std::make_unique<QImage>(hr.width(), hr.height(), QImage::Format_RGB888);
 		QPainter painter(m_imm.get());
 
@@ -115,7 +115,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 			for (size_t i = 0; i < count; ++i)
 			{
 				double value = buff->m_histogram[c].at(i) / maxh;
-				QPoint next(hr.left() + i, hr.bottom() - (value * (hr.height())));
+				QPoint next(hr.left() + static_cast<int>(i), hr.bottom() - (value * (hr.height())));
 				painter.drawLine(prev, next);
 				prev = next;
 			}
@@ -127,7 +127,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 	update();
 }
 
-void HistogramWidget::paintEvent(QPaintEvent* event)
+void HistogramWidget::paintEvent(QPaintEvent* /*event*/)
 {
 	QPainter painter(this);
 

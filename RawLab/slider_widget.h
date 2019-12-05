@@ -43,7 +43,7 @@ public:
 	explicit SliderEditor(const QString& s, QWidget* parent = nullptr)
 		: QLineEdit(s, parent) {}
 private:
-	void focusOutEvent(QFocusEvent* event) override
+	void focusOutEvent(QFocusEvent* /*event*/) override
 	{
 		emit lostFocus();
 	}

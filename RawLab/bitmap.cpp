@@ -2,7 +2,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include "stdafx.h"
-#include <cassert>
 
 template<typename T>
 RgbBuffPtr GetAlignedBufFromBitmapTmpl(const RgbBuff* bmp, bool mirror)

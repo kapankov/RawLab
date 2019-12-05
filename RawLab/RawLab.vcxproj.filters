@@ -111,6 +111,9 @@
     <ClCompile Include="color_math.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cms.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -138,6 +141,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="color_math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

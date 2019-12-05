@@ -68,7 +68,7 @@ void ImageScrollWidget::onScrollSizeChanged(int x, int y)
 	m_lastViewportSize = viewport()->size();
 }
 
-void ImageScrollWidget::scrollContentsBy(int dx, int dy)
+void ImageScrollWidget::scrollContentsBy(int/* dx*/, int/* dy*/)
 {
 	if (m_ignoreScrollContents) return;
 	int x = horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOn ? horizontalScrollBar()->value() : -1;

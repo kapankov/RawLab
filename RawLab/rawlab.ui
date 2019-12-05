@@ -489,6 +489,9 @@ border-radius: 2px;
         <string>Process</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="spacing">
+         <number>2</number>
+        </property>
         <property name="leftMargin">
          <number>2</number>
         </property>
@@ -559,12 +562,27 @@ border-radius: 2px;
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-155</y>
              <width>324</width>
-             <height>533</height>
+             <height>519</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>2</number>
+            </property>
+            <property name="rightMargin">
+             <number>2</number>
+            </property>
+            <property name="bottomMargin">
+             <number>2</number>
+            </property>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,2">
               <property name="spacing">
@@ -931,12 +949,6 @@ border-radius: 2px;
               </property>
               <item>
                <widget class="QLabel" name="lblInputProfile">
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
                 <property name="text">
                  <string>Input profile:</string>
                 </property>
@@ -973,12 +985,6 @@ border-radius: 2px;
               </property>
               <item>
                <widget class="QLabel" name="lblOutProfile">
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
                 <property name="text">
                  <string>Output profile:</string>
                 </property>
@@ -1163,6 +1169,8 @@ border-radius: 2px;
     <addaction name="separator"/>
     <addaction name="menuZoom"/>
     <addaction name="actionCenter"/>
+    <addaction name="separator"/>
+    <addaction name="actionCMS"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1197,7 +1205,6 @@ border-radius: 2px;
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="action_Exit"/>
    <addaction name="action_Open"/>
    <addaction name="action_Save"/>
    <addaction name="separator"/>
@@ -1208,6 +1215,8 @@ border-radius: 2px;
    <addaction name="actionFit_To_Window"/>
    <addaction name="actionZoomToNormal"/>
    <addaction name="actionCenter"/>
+   <addaction name="separator"/>
+   <addaction name="actionCMS"/>
    <addaction name="separator"/>
    <addaction name="action_About"/>
   </widget>
@@ -1356,6 +1365,9 @@ border-radius: 2px;
    <property name="text">
     <string>&amp;Run</string>
    </property>
+   <property name="toolTip">
+    <string>Run (F5)</string>
+   </property>
    <property name="shortcut">
     <string>F5</string>
    </property>
@@ -1417,6 +1429,21 @@ border-radius: 2px;
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="actionCMS">
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="rawlab.qrc">
+     <normaloff>:/images/Resources/cmson.png</normaloff>:/images/Resources/cmson.png</iconset>
+   </property>
+   <property name="text">
+    <string>C&amp;MS is On</string>
+   </property>
+   <property name="shortcut">
+    <string>F8</string>
    </property>
   </action>
  </widget>

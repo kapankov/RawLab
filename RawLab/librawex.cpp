@@ -26,7 +26,7 @@ std::array<float, 4> LibRawEx::getAutoWB()
 	const unsigned int &maximum = imgdata.color.maximum;
 	const ushort &shrink = libraw_internal_data.internal_output_params.shrink;
 	const unsigned int (&cblack)[LIBRAW_CBLACK_SIZE] = imgdata.color.cblack;
-	ushort (* const (&image))[4] = imgdata.image;
+//	ushort (* const (&image))[4] = imgdata.image;
 	unsigned int c;
 	int val;
 	unsigned int sum[8];
@@ -41,7 +41,7 @@ std::array<float, 4> LibRawEx::getAutoWB()
 				memset(sum, 0, sizeof sum);
 				for (unsigned int y = row; y < row + 8 && y < bottom; y++)
 					for (unsigned int x = col; x < col + 8 && x < right; x++)
-						for (unsigned int c = 0; c < 4; c++)
+						for (/*unsigned int */c = 0; c < 4; c++)
 						{
 							if (filters)
 							{
@@ -59,10 +59,10 @@ std::array<float, 4> LibRawEx::getAutoWB()
 							if (filters)
 								break;
 						}
-				for (unsigned int c = 0; c < 8; c++) dsum[c] += sum[c];
+				for (/*unsigned int */c = 0; c < 8; c++) dsum[c] += sum[c];
 				skip_block:;
 			}
-		for (unsigned int c = 0; c < 4; c++) if (dsum[c]) autowb[c] = dsum[c + 4] / dsum[c];
+		for (/*unsigned int */c = 0; c < 4; c++) if (dsum[c]) autowb[c] = dsum[c + 4] / dsum[c];
 		for (dmin = DBL_MAX, dmax = c = 0; c < 4; c++)
 		{
 			if (dmin > autowb[c])
