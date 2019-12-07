@@ -562,7 +562,7 @@ border-radius: 2px;
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-155</y>
+             <y>0</y>
              <width>324</width>
              <height>519</height>
             </rect>
@@ -1176,7 +1176,7 @@ border-radius: 2px;
     <property name="title">
      <string>&amp;Tools</string>
     </property>
-    <addaction name="action_Run"/>
+    <addaction name="action_Process"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_View"/>
@@ -1208,7 +1208,7 @@ border-radius: 2px;
    <addaction name="action_Open"/>
    <addaction name="action_Save"/>
    <addaction name="separator"/>
-   <addaction name="action_Run"/>
+   <addaction name="action_Process"/>
    <addaction name="separator"/>
    <addaction name="actionZoom_In"/>
    <addaction name="actionZoom_Out"/>
@@ -1334,26 +1334,7 @@ border-radius: 2px;
     <string>Zoom 800%</string>
    </property>
   </action>
-  <action name="actionRun">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="rawlab.qrc">
-     <normaloff>:/images/Resources/play.png</normaloff>
-     <normalon>:/images/Resources/stop.png</normalon>:/images/Resources/play.png</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Run</string>
-   </property>
-   <property name="shortcut">
-    <string>F5</string>
-   </property>
-  </action>
-  <action name="action_Run">
+  <action name="action_Process">
    <property name="checkable">
     <bool>false</bool>
    </property>
@@ -1363,10 +1344,10 @@ border-radius: 2px;
      <normalon>:/images/Resources/stop.png</normalon>:/images/Resources/play.png</iconset>
    </property>
    <property name="text">
-    <string>&amp;Run</string>
+    <string>&amp;Process</string>
    </property>
    <property name="toolTip">
-    <string>Run (F5)</string>
+    <string>Process (F5)</string>
    </property>
    <property name="shortcut">
     <string>F5</string>

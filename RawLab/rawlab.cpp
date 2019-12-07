@@ -127,7 +127,7 @@ RawLab::RawLab(QWidget *parent)
 	statusBar()->addPermanentWidget(m_plblInfo,8);
 
 	m_plblState->setText(tr("Ready"));
-	setProgress(tr("Not running"));
+	setProgress(tr("No processing"));
 //	m_plblInfo->setText(tr("Information"));
 
 	ui.openGLWidget->setEmptyLabel(tr("Preview image is not available"));
@@ -229,8 +229,8 @@ RawLab::RawLab(QWidget *parent)
 	connect(this, SIGNAL(rawProcessed(QString)),
 			this, SLOT(onProcessed(QString)),
 			Qt::QueuedConnection);
-	connect(this, SIGNAL(setRun(bool)), 
-			this, SLOT(onSetRun(bool)), 
+	connect(this, SIGNAL(setProcess(bool)), 
+			this, SLOT(onSetProcess(bool)), 
 			Qt::QueuedConnection);
 	connect(this, SIGNAL(setProperties(const QVector< QPair<QString, QString> >&)), 
 			this, SLOT(onSetProperties(const QVector< QPair<QString, QString> >&)), 
@@ -245,7 +245,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
 	connect(ui.openGLWidget, SIGNAL(monitorProfileChanged(bool)), ui.histogram, SLOT(onMonitorProfileChanged(bool)));
 
-	connect(ui.action_Run, SIGNAL(triggered()), this, SLOT(onRun()));
+	connect(ui.action_Process, SIGNAL(triggered()), this, SLOT(onProcess()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
 	connect(ui.actionZoom_Out, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomOut()));
 	connect(ui.actionFit_To_Window, SIGNAL(triggered()), ui.openGLWidget, SLOT(onFitToWindow()));
@@ -374,7 +374,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 		// запустить поток конвертации RAW, потом уже вытащить превью
 		m_lr->recycle();
 		updateParamControls();
-		onRun();
+		onProcess();
 		// заполнить свойства
 		fillProperties(*pLr.get());
 
@@ -443,7 +443,7 @@ void RawLab::ExtractProcessedRaw()
 
 void RawLab::RawProcess()
 {
-	emit setRun(false);
+	emit setProcess(false);
 	// сконвертировать m_filename и показать результат
 	try
 	{	
@@ -487,7 +487,7 @@ void RawLab::RawProcess()
 		setProgress(tr("Something went wrong while the RAW file was being processed."));
 	}
 	m_threadProcess.detach();
-	emit setRun(true);
+	emit setProcess(true);
 }
 
 void RawLab::UpdateCms(bool enable)
@@ -957,21 +957,21 @@ void RawLab::onProcessed(QString message)
 	}
 }
 
-void RawLab::onSetRun(bool default)
+void RawLab::onSetProcess(bool default)
 {
 	if (default)
 	{
-		ui.action_Run->setIcon(QIcon(":/images/Resources/play.png"));
-		ui.action_Run->setText("Run");
-		ui.action_Run->setToolTip("Run (F5)");
-		ui.action_Run->setShortcut(QKeySequence("F5"));
+		ui.action_Process->setIcon(QIcon(":/images/Resources/play.png"));
+		ui.action_Process->setText("Process");
+		ui.action_Process->setToolTip("Process (F5)");
+		ui.action_Process->setShortcut(QKeySequence("F5"));
 	}
 	else
 	{
-		ui.action_Run->setIcon(QIcon(":/images/Resources/stop.png"));
-		ui.action_Run->setText("Cancel RAW processing");
-		ui.action_Run->setToolTip("Cancel RAW processing (Esc)");
-		ui.action_Run->setShortcut(QKeySequence("Esc"));
+		ui.action_Process->setIcon(QIcon(":/images/Resources/stop.png"));
+		ui.action_Process->setText("Cancel RAW processing");
+		ui.action_Process->setToolTip("Cancel RAW processing (Esc)");
+		ui.action_Process->setShortcut(QKeySequence("Esc"));
 	}
 }
 
@@ -1471,7 +1471,7 @@ void RawLab::onExit()
 	QApplication::quit();
 }
 
-void RawLab::onRun()
+void RawLab::onProcess()
 {
 	if (m_filename.isEmpty())
 	{

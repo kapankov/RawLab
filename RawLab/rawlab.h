@@ -101,14 +101,14 @@ private:
 	void updateOutputProfiles();
 signals:
 	void rawProcessed(QString message);
-	void setRun(bool default);
+	void setProcess(bool default);
 public slots:
 	void onOpen();
 	void onSave();
 	void onSavePreview();
 	void onCms();
 	void onExit();
-	void onRun();
+	void onProcess();
 	void onAbout();
 	// Переключение вкладок Process-Properties (Ctrl+Tab)
 	void onNextLeftPanel();
@@ -121,7 +121,7 @@ public slots:
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
 	void onProcessed(QString message);
-	void onSetRun(bool default);
+	void onSetProcess(bool default);
 	void onWBRedValueChanged(double value);
 	void onWBGreenValueChanged(double value);
 	void onWBBlueValueChanged(double value);
