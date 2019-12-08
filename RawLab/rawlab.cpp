@@ -52,41 +52,6 @@ QString getOutputProfilesDir()
 	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/oprofiles";
 }
 
-int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iteration, int expected)
-{
-	RawLab* rawlab = (RawLab*)callback_data;
-	if (rawlab->isCancel()) return 1;
-	int iPrc = expected ? (iteration * 100) / expected : 0;
-	rawlab->setProgress(QString("%1 (%2%)").arg(LibRaw::strprogress(stage), QString::number(iPrc)));
-
-	libraw_data_t& imgdata = rawlab->m_lr->imgdata;
-/*	if (stage == LIBRAW_PROGRESS_SCALE_COLORS && iteration == 0)
-	{
-		// можно и расчитать AutoWb, но это отнимает ненужное время
-		std::array<float, 4> autowb = rawlab->m_lr->getAutoWB();
-	}*/
-	if (stage == LIBRAW_PROGRESS_SCALE_COLORS && iteration==1)
-	{
-		// если выбран AutoWB сохранить pre_mul
-		float (&wb)[4] = rawlab->m_wbpresets[0].wb;
-		if (imgdata.params.use_auto_wb && rawlab->m_wbpresets.size() > 0 &&
-			(fabs(wb[0] - 1.0f) < FLT_EPSILON ||
-			fabs(wb[1] - 1.0f) < FLT_EPSILON ||
-			fabs(wb[2] - 1.0f) < FLT_EPSILON))
-			rawlab->updateAutoWB(imgdata.color.pre_mul, RAWLAB::WBAUTO);
-	}
-
-	// если LIBRAW_PROGRESS_IDENTIFY значит уже открыли файл
-	// LIBRAW_PROGRESS_SCALE_COLORS - обработка уже распакованного файла
-	// проверяем по заполненности списка пресетов (по умолчанию есть всегда пресет Custom)
-	if (rawlab->m_wbpresets.size()<2 && stage > LIBRAW_PROGRESS_IDENTIFY)
-	{
-		rawlab->updateParamControls();
-	}
-
-	return 0;
-}
-
 RawLab::RawLab(QWidget *parent)
 	: QMainWindow(parent)
 	, m_green2div(1.)
@@ -127,7 +92,7 @@ RawLab::RawLab(QWidget *parent)
 	statusBar()->addPermanentWidget(m_plblInfo,8);
 
 	m_plblState->setText(tr("Ready"));
-	setProgress(tr("No processing"));
+	onSetProgress(tr("No processing"));
 //	m_plblInfo->setText(tr("Information"));
 
 	ui.openGLWidget->setEmptyLabel(tr("Preview image is not available"));
@@ -226,12 +191,6 @@ RawLab::RawLab(QWidget *parent)
 	// connections
 	connect(m_NextLeftPanelShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this), &QShortcut::activated, this, &RawLab::onNextLeftPanel);
 
-	connect(this, SIGNAL(rawProcessed(QString)),
-			this, SLOT(onProcessed(QString)),
-			Qt::QueuedConnection);
-	connect(this, SIGNAL(setProcess(bool)), 
-			this, SLOT(onSetProcess(bool)), 
-			Qt::QueuedConnection);
 	connect(this, SIGNAL(setProperties(const QVector< QPair<QString, QString> >&)), 
 			this, SLOT(onSetProperties(const QVector< QPair<QString, QString> >&)), 
 			Qt::QueuedConnection);
@@ -325,8 +284,8 @@ RawLab::RawLab(QWidget *parent)
 
 RawLab::~RawLab()
 {
-	m_cancelProcess.test_and_set();
-	while (m_threadProcess.joinable())	// ждать завершения работы потока
+	emit cancelProcess();
+	while (m_inProcess.fetchAndOrOrdered(0))	// ждать завершения работы потока
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
@@ -373,7 +332,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 		m_filename = filename;
 		// запустить поток конвертации RAW, потом уже вытащить превью
 		m_lr->recycle();
-		updateParamControls();
+		onUpdateParamControls();
 		onProcess();
 		// заполнить свойства
 		fillProperties(*pLr.get());
@@ -384,7 +343,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 	return result;
 }
 
-void RawLab::setProgress(const QString & text)
+void RawLab::onSetProgress(const QString & text)
 {
 	m_plblProgress->setText(text);
 }
@@ -441,55 +400,6 @@ void RawLab::ExtractProcessedRaw()
 	}
 }
 
-void RawLab::RawProcess()
-{
-	emit setProcess(false);
-	// сконвертировать m_filename и показать результат
-	try
-	{	
-		int result = LIBRAW_SUCCESS;
-		// вычислить время конвертации
-		auto start = std::chrono::high_resolution_clock::now();
-
-		m_lr->set_progress_handler(RAW_progress_cb, this);
-
-		libraw_data_t& imgdata = m_lr->imgdata;
-		auto& progress_flags = imgdata.progress_flags;
-		if (progress_flags == 0)
-			result = m_lr->open_file(m_filename.toStdString().c_str());
-		bool fFileUnpacked = !((progress_flags & LIBRAW_PROGRESS_THUMB_MASK) < LIBRAW_PROGRESS_LOAD_RAW);
-
-		if (result == LIBRAW_SUCCESS)
-		{
-			if (!fFileUnpacked)
-				result = m_lr->unpack();
-			if (result == LIBRAW_SUCCESS)
-			{
-				result = m_lr->dcraw_process();
-				if (result == LIBRAW_SUCCESS)
-				{
-					std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-
-					emit rawProcessed(tr("Processed in %1 sec.").arg(elapsed.count(), 0 ,'f', 2));
-				}
-				else throw RawLabException(QString(QString("LibRaw dcraw_process error: %1").arg(LibRaw::strerror(result))).toStdString());
-			}
-			else throw RawLabException(QString(QString("LibRaw unpack error: %1").arg(LibRaw::strerror(result))).toStdString());
-		}
-		else throw RawLabException(QString(QString("LibRaw open_file error: %1").arg(LibRaw::strerror(result))).toStdString());
-	}
-	catch (const RawLabException& e)
-	{
-		setProgress(e.what());
-	}
-	catch (...)
-	{
-		setProgress(tr("Something went wrong while the RAW file was being processed."));
-	}
-	m_threadProcess.detach();
-	emit setProcess(true);
-}
-
 void RawLab::UpdateCms(bool enable)
 {
 	ui.openGLWidget->enableCms(enable);
@@ -544,18 +454,6 @@ void RawLab::setWBControls(const float(&mul)[4], RAWLAB::WBSTATE /*wb*/)
 	setAutoGreen2(defAutoGreen2);
 }
 
-void RawLab::updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb)
-{
-	memcpy(m_wbpresets[0].wb, mul, sizeof(mul));
-	if (wb == RAWLAB::WBAUTO)
-	{
-		setWBSliders(mul);
-		ui.cmbWhiteBalance->setCurrentIndex(1);
-		if (ui.AutoGreen2->isChecked())
-			updateGreen2Div();
-	}
-}
-
 void RawLab::setAutoGreen2(bool value)
 {
 	ui.AutoGreen2->setChecked(value);
@@ -578,7 +476,7 @@ void RawLab::onGammaSlope(double /*gamma*/, double /*slope*/)
 	ui.cmbGammaCurve->setCurrentText("Custom");
 }
 
-void RawLab::updateParamControls()
+void RawLab::onUpdateParamControls()
 {
 	libraw_data_t& imgdata = m_lr->imgdata;
 	libraw_output_params_t &params = imgdata.params;
@@ -875,7 +773,7 @@ void RawLab::openFile(const QString& filename)
 void RawLab::onOpen()
 {
 	// проверить, а не запущен ли поток конвертации RAW
-	if (m_threadProcess.joinable() && !m_filename.isEmpty())
+	if (m_inProcess.fetchAndOrOrdered(0)/* && !m_filename.isEmpty()*/)
 		QMessageBox::information(this, tr("RawLab"),
 			QString(tr("Processing of the previous RAW file\n%1\nis in progress. Wait until the end of the operation.").arg(m_filename)));
 	else
@@ -928,6 +826,18 @@ void RawLab::onMonitorProfileChanged(bool enable)
 		ui.actionCMS->setToolTip(QString("%1\n%2").arg("CMS is Off (F8)", monProfile.isEmpty() ? "No profile" : monProfile));
 }
 
+void RawLab::onUpdateAutoWB(float* mul, RAWLAB::WBSTATE wb)
+{
+	memcpy(m_wbpresets[0].wb, mul, sizeof(mul));
+	if (wb == RAWLAB::WBAUTO)
+	{
+		setWBSliders(m_wbpresets[0].wb);
+		ui.cmbWhiteBalance->setCurrentIndex(1);
+		if (ui.AutoGreen2->isChecked())
+			updateGreen2Div();
+	}
+}
+
 void RawLab::onZoomChanged(int prc)
 {
 	m_plblScale->setText(QString(tr("Scale: %1%")).arg(QString::number(prc)));
@@ -941,12 +851,13 @@ void RawLab::onPointerChanged(int x, int y)
 		m_plblInfo->setText(QString(tr("x=%1, y %2")).arg(QString::number(x), QString::number(y)));
 }
 
-void RawLab::onProcessed(QString message)
+void RawLab::onProcessFinished()
 {
-	if (!message.isEmpty())
-		setProgress(message);
-//	else
-//		setProgress(tr("Ready"));
+	m_inProcess.store(0);
+//	if (!message.isEmpty())
+//		setProgress(message);
+	//	else
+	//		setProgress(tr("Ready"));
 	ExtractProcessedRaw();
 	if (m_pRawBuff && m_pRawBuff->m_buff)
 	{
@@ -1051,16 +962,6 @@ void RawLab::onInputProfilesDirChanged(const QString& /*path*/)
 void RawLab::onOutputProfilesDirChanged(const QString& /*path*/)
 {
 	updateOutputProfiles();
-}
-
-bool RawLab::isCancel()
-{
-	if (!m_cancelProcess.test_and_set())
-	{
-		m_cancelProcess.clear();
-		return false;
-	}
-	return true;
 }
 
 void RawLab::addPropertiesSection(const QString & name)
@@ -1478,13 +1379,12 @@ void RawLab::onProcess()
 		onOpen();
 		return;
 	}
-	if (!m_threadProcess.joinable())
+	if (!m_inProcess.fetchAndOrOrdered(0))
 	{
 		ui.actionPreview->setChecked(true);
 		ui.actionProcessed_RAW->setChecked(false);
 		ui.actionProcessed_RAW->setVisible(false);
 
-		m_cancelProcess.clear();
 		m_lr->clearCancelFlag();
 		// взять параметры из UI
 		{
@@ -1589,12 +1489,39 @@ void RawLab::onProcess()
 				params.output_profile = const_cast<char*>(m_outputProfile.c_str());
 			}
 		}
-		m_threadProcess = std::thread(&RawLab::RawProcess, this);
+		// Создание управляющего потоками класса
+		QThread* thread = new QThread();
+		CProcessThread* process = new CProcessThread(m_lr.get(), m_filename);
+		// Передаем классу QThread права владения классом потока
+		process->moveToThread(thread);
+		// Соединяем сигнал started потока, со слотом process класса потока (код потока)
+		connect(thread, SIGNAL(started()), process, SLOT(process()));
+		// Tells the thread's event loop to exit with return code 0 (success)
+		connect(process, SIGNAL(finished()), thread, SLOT(quit()));
+		// Свяжем сигналы от process с главным окном
+		connect(process, SIGNAL(finished()), this, SLOT(onProcessFinished()));
+		connect(process, SIGNAL(setProgress(const QString&)), this, SLOT(onSetProgress(const QString&)));
+		connect(process, SIGNAL(setProcess(bool)), this, SLOT(onSetProcess(bool)));
+		connect(process, SIGNAL(updateAutoWB(float*, RAWLAB::WBSTATE)), this, SLOT(onUpdateAutoWB(float*, RAWLAB::WBSTATE)));
+		connect(process, SIGNAL(updateParamControls()), this, SLOT(onUpdateParamControls())/*, Qt::QueuedConnection*/);
+		// сигнал остановить
+		connect(this, SIGNAL(cancelProcess()), process, SLOT(cancel()));
+		// 
+/*		connect(process, SIGNAL(finished()), process, SLOT(deleteLater()));
+		// Удаляем поток, после выполнения операции
+		connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));*/
+		connect(thread, SIGNAL(finished()), process, SLOT(deleteLater()));
+		m_inProcess.store(1);
+		// Запускаем поток
+		thread->start();
+
+
+//		m_threadProcess = std::thread(&RawLab::RawProcess, this);
 	}
 	else
 	{
 		m_lr->setCancelFlag();
-		m_cancelProcess.test_and_set();
+		emit cancelProcess();
 	}
 }
 
@@ -1672,7 +1599,7 @@ void RawLab::onShowProcessedRaw()
 	// чтобы повторно не устанавливать Processed RAW
 	if (ui.actionProcessed_RAW->isChecked())
 		// show Processed RAW
-		onProcessed(QString());
+		onProcessFinished();
 	else
 		ui.actionProcessed_RAW->setChecked(true);
 }

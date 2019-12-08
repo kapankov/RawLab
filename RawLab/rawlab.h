@@ -29,7 +29,6 @@ class RawLab : public QMainWindow
 {
 	Q_OBJECT
 
-	friend int RAW_progress_cb(void *callback_data, enum LibRaw_progress stage, int iteration, int expected);
 public:
 	RawLab(QWidget *parent = Q_NULLPTR);
 	~RawLab();
@@ -57,8 +56,7 @@ private:
 	QLabel* m_plblInfo;
 
 	QString m_filename; // открытый файл
-	std::thread m_threadProcess;
-	std::atomic_flag m_cancelProcess ATOMIC_FLAG_INIT;
+	QAtomicInt m_inProcess; // запущен или нет поток выполнени€ обработки RAW
 	RgbBuffPtr	m_pRawBuff;
 	// отслеживает изменени€ в каталоге с профил€ми камер
 	// и обновл€ет комбобокс Input Profiles
@@ -73,8 +71,6 @@ private:
 
 	bool setImageJpegFile(const QString& filename);
 	bool setImageRawFile(const QString&  filename);
-	void setProgress(const QString& text);
-	bool isCancel(); // проверить, нужно ли остановить поток обработки RAW
 	void addPropertiesSection(const QString& name);
 	void addPropertiesItem(const QString& name, const QString& value);
 	void setPropertiesItem(const QString& name, const QString& value);
@@ -83,25 +79,21 @@ private:
 	bool ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr);
 	// ѕолучение обработанного изображени€ из LibRaw в m_pRawBuff
 	void ExtractProcessedRaw();
-	void RawProcess();
 	void UpdateCms(bool enable);
 
 	void setWBSliders(const float(&mul)[4], bool setDefault = true);
 	// обновл€ть WB контролы только после распаковки RAW
 	void setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb);
-	void updateAutoWB(const float(&mul)[4], RAWLAB::WBSTATE wb);
 	void setAutoGreen2(bool value);
 	// при ручном изменении слайдеров гаммы
 	void onGammaSlope(double gamma, double slope);
-	void updateParamControls();
 	// по текущим значени€м слайдеров ЅЅ определить пресет
 	int getWbPreset(const QString& lastPreset = "") const;
 	void updateGreen2Div();
 	void updateInputProfiles();
 	void updateOutputProfiles();
 signals:
-	void rawProcessed(QString message);
-	void setProcess(bool default);
+	void cancelProcess();
 public slots:
 	void onOpen();
 	void onSave();
@@ -118,10 +110,15 @@ public slots:
 	void onShowProcessedRaw();
 	// сменилс€ профиль монитора
 	void onMonitorProfileChanged(bool enable);
+	// слоты дл€ вызова из потока обработки RAW
+	void onProcessFinished();
+	void onSetProgress(const QString& text);
+	void onUpdateAutoWB(float* mul, RAWLAB::WBSTATE wb);
+	void onSetProcess(bool default);
+	void onUpdateParamControls();
+
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
-	void onProcessed(QString message);
-	void onSetProcess(bool default);
 	void onWBRedValueChanged(double value);
 	void onWBGreenValueChanged(double value);
 	void onWBBlueValueChanged(double value);

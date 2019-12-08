@@ -284,6 +284,7 @@
     </ClCompile>
     <ClCompile Include="librawex.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="process_thread.cpp" />
     <ClCompile Include="rawlab.cpp" />
     <ClCompile Include="render_widget.cpp" />
     <ClCompile Include="settings.cpp" />
@@ -308,6 +309,14 @@
       <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdafx.h;image_scroll_widget.h;%(ForceInclude)</ForceInclude>
     </QtMoc>
     <ClInclude Include="librawex.h" />
+    <QtMoc Include="process_thread.h">
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack</IncludePath>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h;process_thread.h;%(ForceInclude)</ForceInclude>
+      <ForceInclude Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdafx.h;process_thread.h;%(ForceInclude)</ForceInclude>
+    </QtMoc>
     <ClInclude Include="settings.h" />
     <QtMoc Include="slider_widget.h">
       <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;.\..\jpeg-9c</IncludePath>
