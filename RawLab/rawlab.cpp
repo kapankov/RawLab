@@ -264,10 +264,12 @@ RawLab::RawLab(QWidget *parent)
 
 RawLab::~RawLab()
 {
+	m_lr->setCancelFlag();
 	emit cancelProcess();
-	while (m_inProcess.fetchAndOrOrdered(0))	// ждать завершения работы потока
+	if (m_thread.isRunning())	// ждать завершения работы потока
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		m_thread.exit();
+		m_thread.wait();
 	}
 
 	m_settings.setValue(std::string("lastdir"), m_lastDir.toStdString());
@@ -370,17 +372,18 @@ void RawLab::ExtractProcessedRaw()
 	if (m_lr->imgdata.params.output_color!=1)
 	{
 		m_pRawBuff->m_params = std::make_unique<CmsParams>();
+		CmsParams* params = m_pRawBuff->m_params.get(); // performance optimization
 		if (m_lr->imgdata.params.output_profile)
 		{
-			m_pRawBuff->m_params->m_iColorSpace = -1;
-			m_pRawBuff->m_params->output_profile = m_lr->imgdata.params.output_profile;
+			params->m_iColorSpace = -1;
+			params->output_profile = m_lr->imgdata.params.output_profile;
 		}
 		else
 		{
-			m_pRawBuff->m_params->m_iColorSpace = m_lr->imgdata.params.output_color;
-			memcpy(m_pRawBuff->m_params->gamm, m_lr->imgdata.params.gamm, sizeof(m_lr->imgdata.params.gamm));
+			params->m_iColorSpace = m_lr->imgdata.params.output_color;
+			memcpy(params->gamm, m_lr->imgdata.params.gamm, sizeof(m_lr->imgdata.params.gamm));
 			if (m_lr->imgdata.params.output_color == 0)
-				memcpy(m_pRawBuff->m_params->cam_xyz, m_lr->imgdata.color.cam_xyz, sizeof(m_lr->imgdata.color.cam_xyz));
+				memcpy(params->cam_xyz, m_lr->imgdata.color.cam_xyz, sizeof(m_lr->imgdata.color.cam_xyz));
 		}
 	}
 }
@@ -763,7 +766,7 @@ void RawLab::moveEvent(QMoveEvent* /*event*/)
 void RawLab::onOpen()
 {
 	// проверить, а не запущен ли поток конвертации RAW
-	if (m_inProcess.fetchAndOrOrdered(0)/* && !m_filename.isEmpty()*/)
+	if (m_thread.isRunning())
 		QMessageBox::information(this, tr("RawLab"),
 			QString(tr("Processing of the previous RAW file\n%1\nis in progress. Wait until the end of the operation.").arg(m_filename)));
 	else
@@ -843,7 +846,6 @@ void RawLab::onPointerChanged(int x, int y)
 
 void RawLab::onProcessFinished()
 {
-	m_inProcess.store(0);
 //	if (!message.isEmpty())
 //		setProgress(message);
 	//	else
@@ -1389,7 +1391,7 @@ void RawLab::onProcess()
 			return;
 		}
 	}
-	if (!m_inProcess.fetchAndOrOrdered(0))
+	if (!m_thread.isRunning())
 	{
 		onShowPreview();
 		ui.actionProcessed_RAW->setChecked(false);
@@ -1499,15 +1501,14 @@ void RawLab::onProcess()
 				params.output_profile = const_cast<char*>(m_outputProfile.c_str());
 			}
 		}
-		// Создание управляющего потоками класса
-		QThread* thread = new QThread();
 		CProcessThread* process = new CProcessThread(m_lr.get(), m_filename);
 		// Передаем классу QThread права владения классом потока
-		process->moveToThread(thread);
+		process->moveToThread(&m_thread);
+		disconnect(&m_thread, SIGNAL(started()), 0, 0);
 		// Соединяем сигнал started потока, со слотом process класса потока (код потока)
-		connect(thread, SIGNAL(started()), process, SLOT(process()));
+		connect(&m_thread, SIGNAL(started()), process, SLOT(process()));
 		// Tells the thread's event loop to exit with return code 0 (success)
-		connect(process, SIGNAL(finished()), thread, SLOT(quit()));
+		connect(process, SIGNAL(finished()), &m_thread, SLOT(quit()));
 		// Свяжем сигналы от process с главным окном
 		connect(process, SIGNAL(finished()), this, SLOT(onProcessFinished()));
 		connect(process, SIGNAL(setProgress(const QString&)), this, SLOT(onSetProgress(const QString&)));
@@ -1515,15 +1516,13 @@ void RawLab::onProcess()
 		connect(process, SIGNAL(updateAutoWB(float*, RAWLAB::WBSTATE)), this, SLOT(onUpdateAutoWB(float*, RAWLAB::WBSTATE)));
 		connect(process, SIGNAL(updateParamControls()), this, SLOT(onUpdateParamControls())/*, Qt::QueuedConnection*/);
 		// сигнал остановить
+		disconnect(this, SIGNAL(cancelProcess()), 0, 0);
 		connect(this, SIGNAL(cancelProcess()), process, SLOT(cancel()), Qt::DirectConnection);
 		// 
 		connect(process, SIGNAL(finished()), process, SLOT(deleteLater()));
-		// Удаляем поток, после выполнения операции
-		connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
-//		connect(thread, SIGNAL(finished()), process, SLOT(deleteLater()));
-		m_inProcess.store(1);
+
 		// Запускаем поток
-		thread->start();
+		m_thread.start();
 
 
 //		m_threadProcess = std::thread(&RawLab::RawProcess, this);
