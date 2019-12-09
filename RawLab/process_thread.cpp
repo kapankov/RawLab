@@ -24,8 +24,8 @@ void CProcessThread::cancel()
 int CProcessThread::progress_cb(void* callback_data, enum LibRaw_progress stage, int iteration, int expected)
 {
 	CProcessThread* process = (CProcessThread*)callback_data;
-	if (!process->m_lr) return 0;
-		if (process->isCancel()) return 1;
+	if (!process->m_lr) return 1;
+	if (process->isCancel()) return 1;
 	int iPrc = expected ? (iteration * 100) / expected : 0;
 	emit process->setProgress(QString("%1 (%2%)").arg(LibRaw::strprogress(stage), QString::number(iPrc)));
 

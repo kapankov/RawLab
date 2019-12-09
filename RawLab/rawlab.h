@@ -95,6 +95,7 @@ private:
 signals:
 	void cancelProcess();
 public slots:
+	void moveEvent(QMoveEvent* event);
 	void onOpen();
 	void onSave();
 	void onSavePreview();

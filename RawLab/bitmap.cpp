@@ -8,7 +8,7 @@ RgbBuffPtr GetAlignedBufFromBitmapTmpl(const RgbBuff* bmp, bool mirror)
 {
 	size_t height = static_cast<size_t>(bmp->m_height);
 	size_t width = static_cast<size_t>(bmp->m_width);
-	size_t ulDwAlgnRowSize = width * 3 * bmp->m_bits/8;
+	size_t ulDwAlgnRowSize = width * static_cast<size_t>(3 * bmp->m_bits/8);
 	if (ulDwAlgnRowSize & 3) ulDwAlgnRowSize += SIZEOFDWORD - (ulDwAlgnRowSize & 3);
 
 	auto ptr = std::make_unique<RgbBuff>();
@@ -20,7 +20,7 @@ RgbBuffPtr GetAlignedBufFromBitmapTmpl(const RgbBuff* bmp, bool mirror)
 		while (szScanline < height)
 		{
 			T* lpDst = reinterpret_cast<T*>(&ptr->m_buff[(mirror ? height - szScanline - 1 : szScanline) * ulDwAlgnRowSize]);
-			T* lpSrc = reinterpret_cast<T*>(&(bmp->m_buff)[szScanline * (width * bmp->m_colors * bmp->m_bits / 8)]);
+			T* lpSrc = reinterpret_cast<T*>(&(bmp->m_buff)[szScanline * (width * static_cast<size_t>(bmp->m_colors * bmp->m_bits / 8))]);
 			for (size_t count = 0; count < width; count++)
 			{
 				*(lpDst + count * 3 + 0) = *(lpSrc + count * 3 + 0);
@@ -36,7 +36,7 @@ RgbBuffPtr GetAlignedBufFromBitmapTmpl(const RgbBuff* bmp, bool mirror)
 		while (szScanline < height)
 		{
 			T* lpDst = reinterpret_cast<T*>(&ptr->m_buff[(mirror ? height - szScanline - 1 : szScanline) * ulDwAlgnRowSize]);
-			T* lpSrc = reinterpret_cast<T*>(&(bmp->m_buff)[szScanline * (width * bmp->m_colors * bmp->m_bits / 8)]);
+			T* lpSrc = reinterpret_cast<T*>(&(bmp->m_buff)[szScanline * (width * static_cast<size_t>(bmp->m_colors * bmp->m_bits / 8))]);
 			for (size_t count = 0; count < width; count++)
 			{
 				*(lpDst + count * 3 + 0) =

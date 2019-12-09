@@ -28,8 +28,8 @@ using histogramvec = std::vector<unsigned int>;
 struct CmsParams
 {
 	int m_iColorSpace = 1; // 0 - Undefined(RAW), 1 - sRGB, 2 - AdobeRGB, 3 - WideRGB, 4 - ProPhoto, 5 - XYZ, 6 - ACES
-	float cam_xyz[4][3]; // Libraw imgdata.color.cam_xyz
-	double gamm[6]; // Libraw imgdata.params.gamm
+	float cam_xyz[4][3] = {}; // Libraw imgdata.color.cam_xyz
+	double gamm[6] = {}; // Libraw imgdata.params.gamm
 	std::string output_profile; // LibRaw imgdata.params.output_profile
 
 };
@@ -63,17 +63,17 @@ struct RgbBuff
 		mycopy->m_colors = m_colors;
 		if (m_params)
 		{
-			mycopy->m_params = std::make_unique<CmsParams>();
-			mycopy->m_params->m_iColorSpace = m_params->m_iColorSpace;
-			memcpy(&(*mycopy->m_params->gamm), m_params->gamm, sizeof(m_params->gamm));
-			memcpy(&(*mycopy->m_params->cam_xyz), m_params->cam_xyz, sizeof(m_params->cam_xyz));
-			mycopy->m_params->output_profile = m_params->output_profile;
+			CmsParams& params= *(mycopy->m_params = std::make_unique<CmsParams>()).get();
+			params.m_iColorSpace = m_params->m_iColorSpace;
+			memcpy(params.gamm, m_params->gamm, sizeof(m_params->gamm));
+			memcpy(params.cam_xyz, m_params->cam_xyz, sizeof(m_params->cam_xyz));
+			params.output_profile = m_params->output_profile;
 		}
 
 		size_t stride;
-		stride = static_cast<size_t>(m_width)* static_cast<size_t>(m_colors)* (m_bits / 8);
+		stride = m_width * static_cast<size_t>(m_colors * m_bits / 8);
 		if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
-		mycopy->m_buff = new unsigned char[stride * static_cast<size_t>(m_height)];
+		mycopy->m_buff = new unsigned char[stride * m_height];
 		memcpy(mycopy->m_buff, m_buff, stride * m_height);
 
 		return std::move(mycopy);

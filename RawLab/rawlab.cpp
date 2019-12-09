@@ -256,29 +256,9 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.sliderSlope, SIGNAL(valueChanged(double)), this, SLOT(onSlopeValueChanged(double)));
 	connect(ui.cmbOutProfile, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		[=](int index) {
-			int i = 0;
-			switch (index)
-			{
-			case 0:
-			case 5:
-			case 6:
-				i = 3;
-				break;
-			case 1:
-				i = 1;
-				break;
-			case 2:
-			case 3:
-				i = 5;
-				break;
-			case 4:
-				i = 4;
-				break;
-			default:
-				return;
-			}
-			ui.cmbGammaCurve->setCurrentIndex(i);
-			ui.cmbGammaCurve->activated(i);
+			constexpr int gammaIndex[] = { 3, 1, 5, 5, 4, 3, 3 };
+			ui.cmbGammaCurve->setCurrentIndex(gammaIndex[index]);
+			ui.cmbGammaCurve->activated(gammaIndex[index]);
 		});
 }
 
@@ -338,6 +318,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 		fillProperties(*pLr.get());
 
 		result = ExtractAndShowPreview(std::move(pLr));
+		if (result) ui.actionPreview->setChecked(true);
 	}
 	else throw RawLabException(QString(tr("Unknown RAW format")).toStdString());
 	return result;
@@ -353,15 +334,19 @@ void RawLab::ExtractProcessedRaw()
 	constexpr bool force8bit = false; // можно заставить LibRaw копировать 8-битное изображение (true)
 	int width, height, colors, bps;
 	size_t stride;
+	libraw_data_t& imgdata = m_lr->imgdata;
+
+	if ((imgdata.progress_flags & LIBRAW_PROGRESS_THUMB_MASK) <
+		LIBRAW_PROGRESS_PRE_INTERPOLATE) return;
+
 	m_lr->get_mem_image_format(&width, &height, &colors, &bps);
 	if (force8bit) bps = 8;
-	stride = static_cast<size_t>(width) * static_cast<size_t>(colors) * (bps/8);
+	stride = static_cast<size_t>(width * colors * bps/8);
 	if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 
 	m_pRawBuff = std::make_unique<RgbBuff>();
 	m_pRawBuff->m_buff = new unsigned char[stride * static_cast<size_t>(height)];
 
-	libraw_data_t& imgdata = m_lr->imgdata;
 	libraw_output_params_t& params = imgdata.params;
 	int ibps = params.output_bps;
 	if (force8bit)
@@ -770,6 +755,11 @@ void RawLab::openFile(const QString& filename)
 	}
 }
 
+void RawLab::moveEvent(QMoveEvent* /*event*/)
+{
+	ui.openGLWidget->checkProfile();
+}
+
 void RawLab::onOpen()
 {
 	// проверить, а не запущен ли поток конвертации RAW
@@ -828,7 +818,7 @@ void RawLab::onMonitorProfileChanged(bool enable)
 
 void RawLab::onUpdateAutoWB(float* mul, RAWLAB::WBSTATE wb)
 {
-	memcpy(m_wbpresets[0].wb, mul, sizeof(mul));
+	memcpy(m_wbpresets[0].wb, mul, sizeof(m_wbpresets[0].wb));
 	if (wb == RAWLAB::WBAUTO)
 	{
 		setWBSliders(m_wbpresets[0].wb);
@@ -922,7 +912,7 @@ void RawLab::onAutoGreen2Clicked(bool /*checked*/)
 				updateGreen2Div();
 		}
 		else // если выбран пресет установить множитель из пресета
-			ui.sliderWBGreen2->setValue(m_wbpresets[ui.cmbWhiteBalance->currentIndex()-1].wb[3]);
+			ui.sliderWBGreen2->setValue(m_wbpresets[static_cast<size_t>(ui.cmbWhiteBalance->currentIndex()-1)].wb[3]);
 		ui.cmbWhiteBalance->setCurrentIndex(getWbPreset());
 		ui.sliderWBGreen2->setEnabled(false);
 	}
@@ -991,17 +981,18 @@ void RawLab::setPropertiesItem(const QString& name, const QString& value)
 	QList<QTableWidgetItem*> itemList = ui.propertiesView->findItems(name, Qt::MatchFixedString | Qt::MatchCaseSensitive);
 	for (int i=0, count=itemList.count();i<count;++i)
 	{
-		if (itemList.at(i)->column() == 0)
+		QTableWidgetItem* item = itemList.at(i);
+		if (item->column() == 0)
 		{
-			QTableWidgetItem* item = ui.propertiesView->item(itemList.at(i)->row(), 1);
-			if (!item)
+			QTableWidgetItem* valueItem = ui.propertiesView->item(item->row(), 1);
+			if (!valueItem)
 			{
-				item = new QTableWidgetItem(value);
-				ui.propertiesView->setItem(itemList.at(i)->row(), 1, item);
+				valueItem = new QTableWidgetItem(value);
+				ui.propertiesView->setItem(item->row(), 1, valueItem);
 			}
 			else
-				item->setText(value);
-			item->setToolTip(value);
+				valueItem->setText(value);
+			valueItem->setToolTip(value);
 			break;
 		}
 	}
@@ -1054,10 +1045,18 @@ void RawLab::fillProperties(const LibRawEx & lr)
 		addPropertiesItem(tr("Internal serial"), QString(lr.imgdata.lens.InternalLensSerial));
 
 	addPropertiesSection(tr("Shot"));
+#if (defined WIN32 || defined WIN64) && defined(_MSC_VER)
+	std::tm* ptm = nullptr;
+	struct tm local_time;
+	errno_t err = localtime_s(&local_time, &lr.imgdata.other.timestamp);
+	if (!err) ptm = &local_time;
+#else
 	std::tm * ptm = std::localtime(&lr.imgdata.other.timestamp);
-	char buffer[32];
+#endif
+	char buffer[32] = {};
 	// Format: Mo, 15.06.2009 20:20:00
-	std::strftime(buffer, sizeof(buffer), "%a, %d.%m.%Y %H:%M:%S", ptm);
+	if (ptm)
+		std::strftime(buffer, sizeof(buffer), "%a, %d.%m.%Y %H:%M:%S", ptm);
 	addPropertiesItem(tr("DateTime"), QString(buffer));
 	addPropertiesItem(tr("ISO"), QString::number(lr.imgdata.other.iso_speed));
 	ULONG shutter = ULONG(lr.imgdata.other.shutter);
@@ -1217,9 +1216,10 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 	bool result = false;
 	if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
 	{
+		libraw_data_t& imgdata = pLr->imgdata;
 		{
 			QString propName(tr("Preview format"));
-			switch (pLr->imgdata.thumbnail.tformat)
+			switch (imgdata.thumbnail.tformat)
 			{
 			case LIBRAW_THUMBNAIL_JPEG:
 				setPropertiesItem(propName, tr("Jpeg"));
@@ -1249,12 +1249,13 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 			{
 				RgbBuffPtr pRgbBuff = GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true);
 				// определим настройку ColorSpace дл€ камер Canon (остальные камеры не изучены)
-				if (pLr->imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Canon)
+				if (imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Canon)
 				{
 					if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
-					pRgbBuff->m_params->m_iColorSpace = pLr->imgdata.makernotes.canon.ColorSpace == 2 ? 2 : 1;
-					if (pRgbBuff->m_params->m_iColorSpace == 2)
-						pRgbBuff->m_params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
+					CmsParams* params = pRgbBuff->m_params.get();
+					params->m_iColorSpace = imgdata.makernotes.canon.ColorSpace == 2 ? 2 : 1;
+					if (params->m_iColorSpace == 2)
+						params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
 				}
 				result = ui.openGLWidget->setRgbBuff(std::move(pRgbBuff));
 			}
@@ -1379,9 +1380,18 @@ void RawLab::onProcess()
 		onOpen();
 		return;
 	}
+	{
+		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
+		if (pLr->open_file(m_filename.toStdString().c_str()) != LIBRAW_SUCCESS)
+		{
+			QMessageBox::critical(this, tr("RawLab error"),
+				QString(tr("Unable to process this file:\n")) + m_filename);
+			return;
+		}
+	}
 	if (!m_inProcess.fetchAndOrOrdered(0))
 	{
-		ui.actionPreview->setChecked(true);
+		onShowPreview();
 		ui.actionProcessed_RAW->setChecked(false);
 		ui.actionProcessed_RAW->setVisible(false);
 
@@ -1505,12 +1515,12 @@ void RawLab::onProcess()
 		connect(process, SIGNAL(updateAutoWB(float*, RAWLAB::WBSTATE)), this, SLOT(onUpdateAutoWB(float*, RAWLAB::WBSTATE)));
 		connect(process, SIGNAL(updateParamControls()), this, SLOT(onUpdateParamControls())/*, Qt::QueuedConnection*/);
 		// сигнал остановить
-		connect(this, SIGNAL(cancelProcess()), process, SLOT(cancel()));
+		connect(this, SIGNAL(cancelProcess()), process, SLOT(cancel()), Qt::DirectConnection);
 		// 
-/*		connect(process, SIGNAL(finished()), process, SLOT(deleteLater()));
+		connect(process, SIGNAL(finished()), process, SLOT(deleteLater()));
 		// ”дал€ем поток, после выполнени€ операции
-		connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));*/
-		connect(thread, SIGNAL(finished()), process, SLOT(deleteLater()));
+		connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+//		connect(thread, SIGNAL(finished()), process, SLOT(deleteLater()));
 		m_inProcess.store(1);
 		// «апускаем поток
 		thread->start();
@@ -1582,24 +1592,27 @@ void RawLab::onNextLeftPanel()
 
 void RawLab::onShowPreview()
 {
+	if (!ui.actionProcessed_RAW->isChecked()) return;
 	if (!m_filename.isEmpty())
 	{
 		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
 		if (pLr->open_file(m_filename.toStdString().c_str()) == LIBRAW_SUCCESS)
-			ExtractAndShowPreview(std::move(pLr));
+			if (ExtractAndShowPreview(std::move(pLr)))
+			{
+				ui.actionProcessed_RAW->setChecked(false);
+				// на случай когда вызвали программно
+				ui.actionPreview->setChecked(true);
+			}
 	}
-	ui.actionPreview->setChecked(true);
-	ui.actionProcessed_RAW->setChecked(false);
 }
 
 void RawLab::onShowProcessedRaw()
 {
 	// Checkable menu item переключает свой check до вызова сигнала
-	// поэтому здесь нужно провер€ть на неустановленный check,
+	// поэтому здесь нужно провер€ть на установленный check ui.actionPreview,
 	// чтобы повторно не устанавливать Processed RAW
-	if (ui.actionProcessed_RAW->isChecked())
+	if (ui.actionPreview->isChecked())
 		// show Processed RAW
 		onProcessFinished();
-	else
-		ui.actionProcessed_RAW->setChecked(true);
+
 }

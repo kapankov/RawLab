@@ -4,6 +4,7 @@
 #include "stdafx.h"
 
 #define isequal(x,y,p) (abs((x)-(y))<(p))
+constexpr cmsInt32Number iccType = 4;
 
 cmsHPROFILE cmsCreateAdobeRGBProfile()
 {
@@ -74,7 +75,7 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 		cmsCIExyY d60_aces = { 0.32168, 0.33767, 1.0 };
 
 		cmsToneCurve* curve[3];
-		cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055,  0.055 / 1.055, 1.0 / 12.92, 0.04045 };
+		const cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055,  0.055 / 1.055, 1.0 / 12.92, 0.04045 };
 
 		switch (iColorSpace)
 		{
@@ -87,7 +88,7 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 		case 1: // sRGB
 //			hProfile = cmsCreate_sRGBProfile();
 			whitepoint = d65_srgb_adobe_specs;
-			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildParametricToneCurve(NULL, 4, srgb_parameters);
+			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildParametricToneCurve(NULL, iccType, srgb_parameters);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &srgb_primaries, curve);
 			break;
 		case 2: // AdobeRGB
@@ -146,7 +147,7 @@ cmsToneCurve* cmsGetToneCurve(const double* gamm)
 			ToneCurve_parameters[2] = gamm[4] / (1.0 + gamm[4]);
 			ToneCurve_parameters[3] = 1.0 / gamm[1];
 			ToneCurve_parameters[4] = gamm[3] * gamm[1];
-			tonecurve = cmsBuildParametricToneCurve(NULL, 4, ToneCurve_parameters);
+			tonecurve = cmsBuildParametricToneCurve(NULL, iccType, ToneCurve_parameters);
 		}
 	}
 	return tonecurve;
@@ -253,7 +254,7 @@ bool TransformColor(void* buff, const size_t width, const size_t height, const i
 	if (cmsHTRANSFORM hTransform = cmsCreateTransform(hInProfile, inputFormat, hOutProfile, outputFormat, INTENT_PERCEPTUAL/*INTENT_RELATIVE_COLORIMETRIC*/, cmsFLAGS_NOCACHE | cmsFLAGS_BLACKPOINTCOMPENSATION))
 	{
 		for (size_t n = 0; n < height; ++n)
-			cmsDoTransform(hTransform, &static_cast<unsigned char*>(buff)[stride * n], &static_cast<unsigned char*>(buff)[stride * n], width);
+			cmsDoTransform(hTransform, &static_cast<unsigned char*>(buff)[stride * n], &static_cast<unsigned char*>(buff)[stride * n], static_cast<cmsUInt32Number>(width));
 		result = true;
 		cmsDeleteTransform(hTransform);
 	}

@@ -74,6 +74,7 @@ class RenderWidget : public QOpenGLWidget
 	// Color Management System state (on / off)
 	bool m_CmsState;
 	QString m_MonitorProfilePath; // путь к файлу профиля монитора
+	int m_MonitorNumber;
 	
 public:
 	RenderWidget(QWidget *parent = 0);
@@ -85,6 +86,7 @@ public:
 	bool isCmsEnabled() const noexcept;
 	QString getMonitorProfile() const;
 	void setMonitorProfile(QString profile);
+	void checkProfile();
 
 signals:
 	void zoomChanged(int prc);

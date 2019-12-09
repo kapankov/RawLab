@@ -1370,9 +1370,6 @@ border-radius: 2px;
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Preview</string>
    </property>

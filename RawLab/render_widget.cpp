@@ -14,6 +14,7 @@ RenderWidget::RenderWidget(QWidget * parent)
 	, m_CmsState(false)
 {
 	resetCenter();
+	m_MonitorNumber = getMonitorNumber();
 }
 
 RenderWidget::~RenderWidget()
@@ -37,7 +38,10 @@ void RenderWidget::enableCms(bool enable)
 {
 	m_CmsState = enable;
 	if (m_CmsState)
+	{
+		m_MonitorNumber = getMonitorNumber();
 		setMonitorProfile(QString::fromStdString(GetMonitorProfile(reinterpret_cast<HWND>(winId()))));
+	}
 	// update something
 	UpdateImage(false);
 }
@@ -59,6 +63,12 @@ void RenderWidget::setMonitorProfile(QString profile)
 		m_MonitorProfilePath = profile;
 		emit monitorProfileChanged(m_CmsState);
 	}
+}
+
+void RenderWidget::checkProfile()
+{
+	if (m_CmsState && m_MonitorNumber != getMonitorNumber())
+			enableCms(true);
 }
 
 bool RenderWidget::UpdateImage(bool resetZoom)
@@ -92,7 +102,8 @@ bool RenderWidget::UpdateImage(bool resetZoom)
 			{
 				// создать буфер для CMS
 				pCmsImgBuff = m_pImgBuff->copy();
-				if (pCmsImgBuff->m_params && pCmsImgBuff->m_params->m_iColorSpace == 2 && pCmsImgBuff->m_params->output_profile.compare("PREVIEW")==0)
+				CmsParams* params = pCmsImgBuff->m_params.get();
+				if (params && params->m_iColorSpace == 2 && params->output_profile.compare("PREVIEW")==0)
 				{
 					if (cmsHPROFILE hInProfile = cmsCreateAdobeRGBProfile())
 					{
@@ -113,10 +124,10 @@ bool RenderWidget::UpdateImage(bool resetZoom)
 						pCmsImgBuff->m_height,
 						pCmsImgBuff->m_bits,
 						const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()),
-						pCmsImgBuff->m_params ? pCmsImgBuff->m_params->m_iColorSpace : 1,
-						pCmsImgBuff->m_params && abs(pCmsImgBuff->m_params->gamm[0]) > DBL_EPSILON ? pCmsImgBuff->m_params->gamm : nullptr,
-						pCmsImgBuff->m_params && pCmsImgBuff->m_params->m_iColorSpace == 0 && abs(pCmsImgBuff->m_params->cam_xyz[0][0]) > FLT_EPSILON ? pCmsImgBuff->m_params->cam_xyz : nullptr,
-						pCmsImgBuff->m_params && pCmsImgBuff->m_params->m_iColorSpace == -1 ? pCmsImgBuff->m_params->output_profile.c_str() : nullptr
+						params ? params->m_iColorSpace : 1,
+						params&& abs(params->gamm[0]) > DBL_EPSILON ? params->gamm : nullptr,
+						params&& params->m_iColorSpace == 0 && abs(params->cam_xyz[0][0]) > FLT_EPSILON ? params->cam_xyz : nullptr,
+						params&& params->m_iColorSpace == -1 ? params->output_profile.c_str() : nullptr
 					);
 				::OutputDebugString((m_MonitorProfilePath + "\n").toStdWString().c_str());
 				pixels = pCmsImgBuff->m_buff;
