@@ -16,15 +16,13 @@ signals:
 	void finished();
 	void setProgress(const QString& text);
 	void setProcess(bool default);
-	void updateAutoWB(float* mul, RAWLAB::WBSTATE wb);
-	void updateParamControls();
+	void updateAutoWB();
 private:
 	LibRawEx* m_lr;
 	bool m_isCancel;
 	QString m_filename;
-	bool m_paramsUpdated; // флаг, чтобы один раз обновить параметры через сигнал updateParamControls()
+	bool m_paramsUpdated; // флаг, чтобы один раз обновить параметры через сигнал updateParamControls(const LibRawEx&)
 	static int progress_cb(void* callback_data, enum LibRaw_progress stage, int iteration, int expected);
-	void updateParamControls(enum LibRaw_progress stage);
 };
 
 #endif

@@ -124,7 +124,7 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 			hProfile = cmsCreateRGBProfile(&whitepoint, &aces_primaries, curve);
 			break;
 		}
-		if (!tonecurve && (iColorSpace>0 && iColorSpace<7/* && iColorSpace!=5*/)) cmsFreeToneCurve(curve[0]);
+		if (!tonecurve) cmsFreeToneCurve(curve[0]);
 	}
 	return hProfile;
 }
@@ -177,14 +177,14 @@ cmsHPROFILE cmsCreateProfile(const int iColorSpace, const double* gamm, cmsCIExy
 	return hProfile;
 }
 
-void pseudoinverse(double(*in)[3], double(*out)[3], int size)
+void pseudoinverse(double(*in)[3], double(*out)[3], size_t size)
 {
 	double work[3][6], num;
-	int i, j, k;
+	size_t i, j, k;
 
 	for (i = 0; i < 3; i++) {
 		for (j = 0; j < 6; j++)
-			work[i][j] = j == i + 3;
+			work[i][j] = static_cast<double>(j == i + 3);
 		for (j = 0; j < 3; j++)
 			for (k = 0; k < size; k++)
 				work[i][j] += in[k][i] * in[k][j];
@@ -202,7 +202,7 @@ void pseudoinverse(double(*in)[3], double(*out)[3], int size)
 	}
 	for (i = 0; i < size; i++)
 		for (j = 0; j < 3; j++)
-			for (out[i][j] = k = 0; k < 3; k++)
+			for (out[i][j] = static_cast<double>(k = 0); k < 3; k++)
 				out[i][j] += work[j][k + 3] * in[i][k];
 }
 
@@ -240,7 +240,7 @@ bool TransformColor(void* buff, const size_t width, const size_t height, const i
 	bool result = false;
 
 	size_t stride;
-	stride = static_cast<size_t>(width) * 3 * (bps / 8);
+	stride = width * static_cast<size_t>(3 * bps / 8);
 	if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 #ifndef TYPE_XYZ_8
 #define TYPE_XYZ_8            (COLORSPACE_SH(PT_XYZ)|CHANNELS_SH(3)|BYTES_SH(1))

@@ -626,47 +626,6 @@ border-radius: 2px;
              </layout>
             </item>
             <item>
-             <widget class="SliderWidget" name="sliderWBGreen2" native="true">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>500</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Green2 WB channel</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="SliderWidget" name="sliderWBBlue" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>500</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Blue WB channel</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="SliderWidget" name="sliderWBRed" native="true">
               <property name="minimumSize">
                <size>
@@ -701,6 +660,47 @@ border-radius: 2px;
               </property>
               <property name="toolTip">
                <string>Green WB channel</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderWBBlue" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Blue WB channel</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderWBGreen2" native="true">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Green2 WB channel</string>
               </property>
              </widget>
             </item>

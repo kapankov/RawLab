@@ -257,8 +257,8 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.cmbOutProfile, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		[=](int index) {
 			constexpr int gammaIndex[] = { 3, 1, 5, 5, 4, 3, 3 };
-			ui.cmbGammaCurve->setCurrentIndex(gammaIndex[index]);
-			ui.cmbGammaCurve->activated(gammaIndex[index]);
+			ui.cmbGammaCurve->setCurrentIndex(index < 7 ? gammaIndex[index] : 3);
+			ui.cmbGammaCurve->activated(index < 7 ? gammaIndex[index] : 3);
 		});
 }
 
@@ -314,7 +314,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 		m_filename = filename;
 		// запустить поток конвертации RAW, потом уже вытащить превью
 		m_lr->recycle();
-		onUpdateParamControls();
+		onUpdateParamControls(*pLr.get());
 		onProcess();
 		// заполнить свойства
 		fillProperties(*pLr.get());
@@ -336,7 +336,7 @@ void RawLab::ExtractProcessedRaw()
 	constexpr bool force8bit = false; // можно заставить LibRaw копировать 8-битное изображение (true)
 	int width, height, colors, bps;
 	size_t stride;
-	libraw_data_t& imgdata = m_lr->imgdata;
+	libraw_data_t& imgdata = m_lr->imgdata;  // performance optimization
 
 	if ((imgdata.progress_flags & LIBRAW_PROGRESS_THUMB_MASK) <
 		LIBRAW_PROGRESS_PRE_INTERPOLATE) return;
@@ -369,21 +369,22 @@ void RawLab::ExtractProcessedRaw()
 	m_pRawBuff->m_bits = force8bit ? 8 : ibps;
 	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
 	m_pRawBuff->m_colors = colors;
-	if (m_lr->imgdata.params.output_color!=1)
+	libraw_output_params_t& lrParams = imgdata.params; // po
+	if (lrParams.output_color!=1)
 	{
 		m_pRawBuff->m_params = std::make_unique<CmsParams>();
-		CmsParams* params = m_pRawBuff->m_params.get(); // performance optimization
-		if (m_lr->imgdata.params.output_profile)
+		CmsParams* cmsParams = m_pRawBuff->m_params.get(); //po
+		if (lrParams.output_profile)
 		{
-			params->m_iColorSpace = -1;
-			params->output_profile = m_lr->imgdata.params.output_profile;
+			cmsParams->m_iColorSpace = -1;
+			cmsParams->output_profile = lrParams.output_profile;
 		}
 		else
 		{
-			params->m_iColorSpace = m_lr->imgdata.params.output_color;
-			memcpy(params->gamm, m_lr->imgdata.params.gamm, sizeof(m_lr->imgdata.params.gamm));
-			if (m_lr->imgdata.params.output_color == 0)
-				memcpy(params->cam_xyz, m_lr->imgdata.color.cam_xyz, sizeof(m_lr->imgdata.color.cam_xyz));
+			cmsParams->m_iColorSpace = lrParams.output_color;
+			memcpy(cmsParams->gamm, lrParams.gamm, sizeof(lrParams.gamm));
+			if (lrParams.output_color == 0)
+				memcpy(cmsParams->cam_xyz, imgdata.color.cam_xyz, sizeof(imgdata.color.cam_xyz));
 		}
 	}
 }
@@ -434,7 +435,7 @@ void RawLab::setWBControls(const float(&mul)[4], RAWLAB::WBSTATE /*wb*/)
 	ui.cmbWhiteBalance->addItem(tr("Custom"));
 	for (auto x : m_wbpresets)
 		ui.cmbWhiteBalance->addItem(x.name);
-	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset(/*m_lastWBPreset*/));
+	ui.cmbWhiteBalance->setCurrentIndex(getWbPreset(m_lastWBPreset));
 
 	bool  defAutoGreen2 = m_settings.getValue(std::string("autogreen2")).compare(std::string("true")) == 0;
 	if (defAutoGreen2)
@@ -464,11 +465,11 @@ void RawLab::onGammaSlope(double /*gamma*/, double /*slope*/)
 	ui.cmbGammaCurve->setCurrentText("Custom");
 }
 
-void RawLab::onUpdateParamControls()
+void RawLab::onUpdateParamControls(const LibRawEx& lr)
 {
-	libraw_data_t& imgdata = m_lr->imgdata;
-	libraw_output_params_t &params = imgdata.params;
-	libraw_colordata_t &color = imgdata.color;
+	const libraw_data_t& imgdata = lr.imgdata;
+	const libraw_output_params_t &params = imgdata.params;
+	const libraw_colordata_t &color = imgdata.color;
 	float tempwb[4] = { 1.0f,1.0f,1.0f,1.0f };
 	auto safewb = [&tempwb](const float(&mul)[4]) -> float(&)[4]
 	{
@@ -570,7 +571,7 @@ void RawLab::onUpdateParamControls()
 
 	RAWLAB::WBSTATE wb = RAWLAB::WBUNKNOWN;
 	// если использован пользовательский WB
-	float(&mul)[4] = params.user_mul;
+	const float(&mul)[4] = params.user_mul;
 	if (mul[0] || mul[1] || mul[2] || mul[3])
 		wb = RAWLAB::WBUSER;
 	// если авто (расчитывается в LibRaw)
@@ -819,16 +820,13 @@ void RawLab::onMonitorProfileChanged(bool enable)
 		ui.actionCMS->setToolTip(QString("%1\n%2").arg("CMS is Off (F8)", monProfile.isEmpty() ? "No profile" : monProfile));
 }
 
-void RawLab::onUpdateAutoWB(float* mul, RAWLAB::WBSTATE wb)
+void RawLab::onUpdateAutoWB()
 {
-	memcpy(m_wbpresets[0].wb, mul, sizeof(m_wbpresets[0].wb));
-	if (wb == RAWLAB::WBAUTO)
-	{
-		setWBSliders(m_wbpresets[0].wb);
-		ui.cmbWhiteBalance->setCurrentIndex(1);
-		if (ui.AutoGreen2->isChecked())
-			updateGreen2Div();
-	}
+	memcpy(m_wbpresets[0].wb, m_lr->auto_mul, sizeof(m_wbpresets[0].wb));
+	setWBSliders(m_wbpresets[0].wb);
+	ui.cmbWhiteBalance->setCurrentIndex(1);
+	if (ui.AutoGreen2->isChecked())
+		updateGreen2Div();
 }
 
 void RawLab::onZoomChanged(int prc)
@@ -1406,6 +1404,7 @@ void RawLab::onProcess()
 			// 16 or 8 bit support
 			params.output_bps = m_settings.getValue(std::string("bps")).compare(std::string("16")) == 0 ? 16 : 8;
 			// баланс белого
+			m_lastWBPreset = ui.cmbWhiteBalance->currentText();
 			float(&mul)[4] = params.user_mul;
 			mul[0] = 0.0;
 			mul[1] = 0.0;
@@ -1471,8 +1470,11 @@ void RawLab::onProcess()
 			// Highlights
 			params.highlight = ui.cmbHighlightMode->currentIndex();
 			// Gamma
-			params.gamm[0] = 1.0 / ui.sliderGamma->getValue();
-			params.gamm[1] = ui.sliderSlope->getValue();
+			double gamma = ui.sliderGamma->getValue();
+			double slope = ui.sliderSlope->getValue();
+			if (gamma < DBL_EPSILON) gamma = 1.0;
+			params.gamm[0] = 1.0 / gamma;
+			params.gamm[1] = slope;
 			params.gamm[2] = params.gamm[3] = params.gamm[4] = params.gamm[5] = 0;
 			// Input profile
 			params.camera_profile = nullptr;
@@ -1513,8 +1515,7 @@ void RawLab::onProcess()
 		connect(process, SIGNAL(finished()), this, SLOT(onProcessFinished()));
 		connect(process, SIGNAL(setProgress(const QString&)), this, SLOT(onSetProgress(const QString&)));
 		connect(process, SIGNAL(setProcess(bool)), this, SLOT(onSetProcess(bool)));
-		connect(process, SIGNAL(updateAutoWB(float*, RAWLAB::WBSTATE)), this, SLOT(onUpdateAutoWB(float*, RAWLAB::WBSTATE)));
-		connect(process, SIGNAL(updateParamControls()), this, SLOT(onUpdateParamControls())/*, Qt::QueuedConnection*/);
+		connect(process, SIGNAL(updateAutoWB()), this, SLOT(onUpdateAutoWB())/*, Qt::QueuedConnection*/);
 		// сигнал остановить
 		disconnect(this, SIGNAL(cancelProcess()), 0, 0);
 		connect(this, SIGNAL(cancelProcess()), process, SLOT(cancel()), Qt::DirectConnection);
@@ -1523,9 +1524,6 @@ void RawLab::onProcess()
 
 		// Запускаем поток
 		m_thread.start();
-
-
-//		m_threadProcess = std::thread(&RawLab::RawProcess, this);
 	}
 	else
 	{

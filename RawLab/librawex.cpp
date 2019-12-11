@@ -8,7 +8,8 @@
 LibRawEx::LibRawEx()
 {
 	m_defaultLibrawOutputParamsPtr = std::make_unique<libraw_output_params_t>(imgdata.params);
-
+	auto_mul[0] = auto_mul[1] = auto_mul[2] = 1.0f;
+	auto_mul[3] = .0f;
 //#pragma premsg(проинициализировать exparams) 
 	// init exparams
 }

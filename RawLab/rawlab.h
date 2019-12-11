@@ -39,6 +39,7 @@ private:
 
 	std::unique_ptr<LibRawEx> m_lr;
 	std::vector<wbpreset> m_wbpresets;
+	QString m_lastWBPreset;
 	// делитель для автоматического расчета второго зеленого канала Green2 баланса белого
 	float m_green2div;
 
@@ -114,9 +115,9 @@ public slots:
 	// слоты для вызова из потока обработки RAW
 	void onProcessFinished();
 	void onSetProgress(const QString& text);
-	void onUpdateAutoWB(float* mul, RAWLAB::WBSTATE wb);
+	void onUpdateAutoWB();
 	void onSetProcess(bool default);
-	void onUpdateParamControls();
+	void onUpdateParamControls(const LibRawEx& lr);
 
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
