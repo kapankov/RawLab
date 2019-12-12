@@ -274,3 +274,6 @@ __pycache__/
 *.exe
 *.iss
 /Changelog.txt
+/Output/WizModernSmallImage0.bmp
+/Output/WizModernSmallImage.bmp
+/Output/WizModernImage.bmp

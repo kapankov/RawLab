@@ -58,6 +58,9 @@ RawLab::RawLab(QWidget *parent)
 {
 	ui.setupUi(this);
 
+	// hide menu item - Switch View
+	ui.menu_View->removeAction(ui.actionSwitch_View);
+
 	m_lr = std::make_unique<LibRawEx>();
 
 	m_settings.setPath(QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
@@ -200,6 +203,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionSave_Preview, SIGNAL(triggered()), this, SLOT(onSavePreview()));
 	connect(ui.actionPreview, SIGNAL(triggered()), this, SLOT(onShowPreview()));
 	connect(ui.actionProcessed_RAW, SIGNAL(triggered()), this, SLOT(onShowProcessedRaw()));
+	connect(ui.actionSwitch_View, SIGNAL(triggered()), this, SLOT(onSwitchView()));
 	connect(ui.actionCMS, SIGNAL(triggered()), this, SLOT(onCms()));
 	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
 	connect(ui.openGLWidget, SIGNAL(monitorProfileChanged(bool)), ui.histogram, SLOT(onMonitorProfileChanged(bool)));
@@ -844,21 +848,21 @@ void RawLab::onPointerChanged(int x, int y)
 
 void RawLab::onProcessFinished()
 {
-//	if (!message.isEmpty())
-//		setProgress(message);
-	//	else
-	//		setProgress(tr("Ready"));
 	ExtractProcessedRaw();
+	// только если успешно завершилась конвертация
 	if (m_pRawBuff && m_pRawBuff->m_buff)
 	{
 		ui.openGLWidget->setRgbBuff(std::move(m_pRawBuff));
 		ui.actionPreview->setChecked(false);
 		ui.actionProcessed_RAW->setChecked(true);
 		ui.actionProcessed_RAW->setVisible(true);
+		ui.actionSwitch_View->setIcon(QIcon(":/images/Resources/rawview.png"));
+		ui.actionSwitch_View->setToolTip("RAW (F3)");
 	}
+	SetProcess(true);
 }
 
-void RawLab::onSetProcess(bool default)
+void RawLab::SetProcess(bool default)
 {
 	if (default)
 	{
@@ -1503,6 +1507,7 @@ void RawLab::onProcess()
 				params.output_profile = const_cast<char*>(m_outputProfile.c_str());
 			}
 		}
+		SetProcess(false);
 		CProcessThread* process = new CProcessThread(m_lr.get(), m_filename);
 		// Передаем классу QThread права владения классом потока
 		process->moveToThread(&m_thread);
@@ -1514,7 +1519,6 @@ void RawLab::onProcess()
 		// Свяжем сигналы от process с главным окном
 		connect(process, SIGNAL(finished()), this, SLOT(onProcessFinished()));
 		connect(process, SIGNAL(setProgress(const QString&)), this, SLOT(onSetProgress(const QString&)));
-		connect(process, SIGNAL(setProcess(bool)), this, SLOT(onSetProcess(bool)));
 		connect(process, SIGNAL(updateAutoWB()), this, SLOT(onUpdateAutoWB())/*, Qt::QueuedConnection*/);
 		// сигнал остановить
 		disconnect(this, SIGNAL(cancelProcess()), 0, 0);
@@ -1599,7 +1603,25 @@ void RawLab::onShowPreview()
 				ui.actionProcessed_RAW->setChecked(false);
 				// на случай когда вызвали программно
 				ui.actionPreview->setChecked(true);
+				ui.actionSwitch_View->setIcon(QIcon(":/images/Resources/preview.png"));
+				ui.actionSwitch_View->setToolTip("Preview (F3)");
 			}
+	}
+}
+
+void RawLab::onSwitchView()
+{
+	if (ui.actionPreview->isVisible())
+	{
+		if (ui.actionPreview->isChecked())
+		{
+			if (ui.actionProcessed_RAW->isVisible())
+				onShowProcessedRaw();
+		}
+		else
+		{
+			onShowPreview();
+		}
 	}
 }
 

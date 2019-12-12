@@ -1171,6 +1171,7 @@ border-radius: 2px;
     <addaction name="actionCenter"/>
     <addaction name="separator"/>
     <addaction name="actionCMS"/>
+    <addaction name="actionSwitch_View"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1216,6 +1217,7 @@ border-radius: 2px;
    <addaction name="actionZoomToNormal"/>
    <addaction name="actionCenter"/>
    <addaction name="separator"/>
+   <addaction name="actionSwitch_View"/>
    <addaction name="actionCMS"/>
    <addaction name="separator"/>
    <addaction name="action_About"/>
@@ -1376,9 +1378,6 @@ border-radius: 2px;
    <property name="visible">
     <bool>false</bool>
    </property>
-   <property name="iconVisibleInMenu">
-    <bool>false</bool>
-   </property>
   </action>
   <action name="actionProcessed_RAW">
    <property name="checkable">
@@ -1422,6 +1421,21 @@ border-radius: 2px;
    </property>
    <property name="shortcut">
     <string>F8</string>
+   </property>
+  </action>
+  <action name="actionSwitch_View">
+   <property name="icon">
+    <iconset resource="rawlab.qrc">
+     <normaloff>:/images/Resources/preview.png</normaloff>:/images/Resources/preview.png</iconset>
+   </property>
+   <property name="text">
+    <string>Switch View</string>
+   </property>
+   <property name="toolTip">
+    <string>Preview</string>
+   </property>
+   <property name="shortcut">
+    <string>F3</string>
    </property>
   </action>
  </widget>

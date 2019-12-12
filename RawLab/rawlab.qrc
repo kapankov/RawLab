@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="images">
+    <file>Resources/preview.png</file>
+    <file>Resources/rawview.png</file>
     <file>Resources/cmsoff.png</file>
     <file>Resources/cmson.png</file>
     <file>Resources/savepreview.png</file>

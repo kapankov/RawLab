@@ -55,7 +55,6 @@ int CProcessThread::progress_cb(void* callback_data, enum LibRaw_progress stage,
 
 void CProcessThread::process()
 {
-	emit setProcess(false);
 	// сконвертировать m_filename и показать результат
 	try
 	{
@@ -98,6 +97,5 @@ void CProcessThread::process()
 	{
 		emit setProgress(tr("Something went wrong while the RAW file was being processed."));
 	}
-	emit setProcess(true);
 	emit finished();
 }

@@ -15,7 +15,6 @@ public slots:
 signals:
 	void finished();
 	void setProgress(const QString& text);
-	void setProcess(bool default);
 	void updateAutoWB();
 private:
 	LibRawEx* m_lr;

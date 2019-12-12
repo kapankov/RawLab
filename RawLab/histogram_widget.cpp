@@ -8,33 +8,34 @@ HistogramWidget::HistogramWidget(QWidget* /* parent*/)
 {
 }
 
-void HistogramWidget::onImageChanged(RgbBuff* buff)
+void HistogramWidget::onImageChanged(RgbBuff* rgbBuff)
 {
-	if (buff && buff->m_buff)
+	if (rgbBuff && rgbBuff->m_buff)
 	{
-		bool is16bit = buff->m_bits == 16;
+		bool is16bit = rgbBuff->m_bits == 16;
 		// создаем гистограмму
-		buff->alloc_histogram();
-		size_t stride = buff->m_width * static_cast<size_t>(3 * buff->m_bits/8);
+		size_t stride = rgbBuff->m_width * static_cast<size_t>(3 * rgbBuff->m_bits/8);
 		if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 
-		for (size_t h = 0, hcount = static_cast<size_t>(buff->m_height); h < hcount; ++h)
-			for (size_t w = 0, wcount = static_cast<size_t>(buff->m_width); w < wcount; ++w)
-			{
-				size_t n = h * stride + w * static_cast<size_t>(3 * buff->m_bits / 8);
-				for (size_t c = 0; c < 3; ++c)
+		unsigned char* buff = rgbBuff->m_buff;
+//		#pragma omp parallel
+		for (size_t c = 0; c < 3; ++c)
+		{
+			histogram_channel& hg = rgbBuff->m_histogram[c];
+			for (size_t h = 0, hcount = static_cast<size_t>(rgbBuff->m_height); h < hcount; ++h)
+				for (size_t w = 0, wcount = static_cast<size_t>(rgbBuff->m_width); w < wcount; ++w)
 				{
+					size_t n = h * stride + w * static_cast<size_t>(3 * rgbBuff->m_bits / 8);
 					unsigned char k = 0;
 					if (is16bit)
-					{
-						k = (*reinterpret_cast<unsigned short*>(&buff->m_buff[n + c * static_cast<size_t>(buff->m_bits / 8)])) >> 8;
-					}
+						k = buff[n + (c << 1) + 1];
 					else
-						k = buff->m_buff[n + c];
-					buff->m_histogram[c][k]++;
-					if (!buff->m_histogram[c][k]) buff->m_histogram[c][k]--; // на случай переполнения
+						k = buff[n + c];
+					unsigned int& t = hg[k];
+					if (t != UINT_MAX) // на случай переполнения
+						t++;
 				}
-			}
+		}
 
 		QRect hr(0, 0, static_cast<int>(m_Columns), rect().height() - 6);
 		m_imm = std::make_unique<QImage>(hr.width(), hr.height(), QImage::Format_RGB888);
@@ -44,24 +45,28 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 
 		painter.setCompositionMode(QPainter::CompositionMode_Plus);
 
-		size_t count = buff->m_histogram[0].size();
+		histogram_channel& hgred = rgbBuff->m_histogram[0];
+		histogram_channel& hggreen = rgbBuff->m_histogram[1];
+		histogram_channel& hgblue = rgbBuff->m_histogram[0];
+
+		size_t count = hgred.size();
 		// найдем максимум без последнего элемента (света) во всех трех каналах
 		double maxh = std::max(
 			std::max(
-				*std::max_element(buff->m_histogram[0].begin(), buff->m_histogram[0].end() - 1),
-				*std::max_element(buff->m_histogram[1].begin(), buff->m_histogram[1].end() - 1)
+				*std::max_element(hgred.begin(), hgred.end() - 1),
+				*std::max_element(hggreen.begin(), hggreen.end() - 1)
 			),
-			*std::max_element(buff->m_histogram[2].begin(), buff->m_histogram[2].end() - 1)
+			*std::max_element(hgblue.begin(), hgblue.end() - 1)
 		);
 
 		m_stat = QString(tr("max = %1\n\nOE:\nR = %2\nG = %3\nB = %4\n\nUE:\nR = %5\nG = %6\nB = %7")).arg(
 			QString::number(static_cast<int>(maxh)),
-			QString::number(buff->m_histogram[0].at(255)),
-			QString::number(buff->m_histogram[1].at(255)),
-			QString::number(buff->m_histogram[2].at(255)),
-			QString::number(buff->m_histogram[0].at(0)),
-			QString::number(buff->m_histogram[1].at(0)),
-			QString::number(buff->m_histogram[2].at(0)));
+			QString::number(hgred.at(255)),
+			QString::number(hggreen.at(255)),
+			QString::number(hgblue.at(255)),
+			QString::number(hgred.at(0)),
+			QString::number(hggreen.at(0)),
+			QString::number(hgblue.at(0)));
 		// прорисовать наложение каналов
 		for (size_t c = 0; c < 3; ++c)
 		{
@@ -79,7 +84,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 			};
 			for (size_t i = 0; i < count; ++i)
 			{
-				double value = buff->m_histogram[c].at(i) / maxh;
+				double value = rgbBuff->m_histogram[c][i] / maxh;
 				painter.drawLine(QPoint(hr.left() + static_cast<int>(i), hr.bottom()), QPoint(hr.left() + static_cast<int>(i), hr.bottom() - value * (hr.height())));
 			}
 		}
@@ -114,7 +119,7 @@ void HistogramWidget::onImageChanged(RgbBuff* buff)
 			QPoint prev(0, 0);
 			for (size_t i = 0; i < count; ++i)
 			{
-				double value = buff->m_histogram[c].at(i) / maxh;
+				double value = rgbBuff->m_histogram[c][i] / maxh;
 				QPoint next(hr.left() + static_cast<int>(i), hr.bottom() - (value * (hr.height())));
 				painter.drawLine(prev, next);
 				prev = next;

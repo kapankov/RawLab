@@ -23,7 +23,7 @@ public:
 	}
 };
 
-using histogramvec = std::vector<unsigned int>;
+using histogram_channel = std::array<unsigned int, 256>;
 
 struct CmsParams
 {
@@ -43,16 +43,10 @@ struct RgbBuff
 	int m_colors;
 	std::unique_ptr<CmsParams> m_params;
 
-	histogramvec m_histogram[3];
+	std::array<histogram_channel, 3> m_histogram = { };
 
 	RgbBuff() : m_buff(nullptr), m_width(0), m_height(0), m_bits(8), m_colors(3) {}
 	~RgbBuff() { delete[] m_buff; }
-
-	void alloc_histogram()
-	{
-		for (int i = 0; i < 3; ++i)
-			m_histogram[i].resize(256);
-	}
 
 	std::unique_ptr<RgbBuff> copy()
 	{

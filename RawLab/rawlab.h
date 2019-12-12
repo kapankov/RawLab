@@ -82,6 +82,7 @@ private:
 	void ExtractProcessedRaw();
 	void UpdateCms(bool enable);
 
+	void SetProcess(bool default);
 	void setWBSliders(const float(&mul)[4], bool setDefault = true);
 	// обновлять WB контролы только после распаковки RAW
 	void setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb);
@@ -108,6 +109,7 @@ public slots:
 	void onNextLeftPanel();
 	// показать Preview
 	void onShowPreview();
+	void onSwitchView();
 	// показать результат RAW-обработки
 	void onShowProcessedRaw();
 	// сменился профиль монитора
@@ -116,7 +118,6 @@ public slots:
 	void onProcessFinished();
 	void onSetProgress(const QString& text);
 	void onUpdateAutoWB();
-	void onSetProcess(bool default);
 	void onUpdateParamControls(const LibRawEx& lr);
 
 	void onZoomChanged(int prc);
