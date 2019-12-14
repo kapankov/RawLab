@@ -263,8 +263,7 @@ __pycache__/
 /LibRaw
 /RawLab/GeneratedFiles
 /BuildAll.txt
-/RawLab/DSC05086web.jpg
-/RawLab/DSC05086corners.jpg
+/RawLab/*.jpg
 /libiconv-1.16
 /libxml2-2.9.9
 /HowToBuild.txt
@@ -274,3 +273,5 @@ __pycache__/
 *.exe
 *.iss
 /Changelog.txt
+/Output/*.bmp
+
