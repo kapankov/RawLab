@@ -259,18 +259,18 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+/RawLab/GeneratedFiles
 /jpeg-9c
 /LibRaw
-/RawLab/GeneratedFiles
-/BuildAll.txt
-/RawLab/*.jpg
 /libiconv-1.16
 /libxml2-2.9.9
-/ToDo.txt
 /lcms2-2.9
 /RawSpeed
 *.exe
 *.iss
-/Changelog.txt
 /Output/*.bmp
-
+/BuildAll.txt
+/Changelog.txt
+/HowToBuild.txt
+/ToDo.txt
+/RawLab/*.jpg
