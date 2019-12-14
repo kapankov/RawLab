@@ -18,7 +18,7 @@ public:
 signals:
 
 public slots:
-	void onImageChanged(RgbBuff* buff);
+	void onImageChanged(RgbBuff* rgbBuff);
 private:
 	void paintEvent(QPaintEvent* event);
 };

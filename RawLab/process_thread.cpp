@@ -24,8 +24,8 @@ void CProcessThread::cancel()
 int CProcessThread::progress_cb(void* callback_data, enum LibRaw_progress stage, int iteration, int expected)
 {
 	CProcessThread* process = (CProcessThread*)callback_data;
-	if (!process->m_lr) return 0;
-		if (process->isCancel()) return 1;
+	if (!process->m_lr) return 1;
+	if (process->isCancel()) return 1;
 	int iPrc = expected ? (iteration * 100) / expected : 0;
 	emit process->setProgress(QString("%1 (%2%)").arg(LibRaw::strprogress(stage), QString::number(iPrc)));
 
@@ -43,28 +43,18 @@ int CProcessThread::progress_cb(void* callback_data, enum LibRaw_progress stage,
 			(fabs(wb[0] - 1.0f) < FLT_EPSILON ||
 				fabs(wb[1] - 1.0f) < FLT_EPSILON ||
 				fabs(wb[2] - 1.0f) < FLT_EPSILON)*/)
-			emit process->updateAutoWB(imgdata.color.pre_mul, RAWLAB::WBAUTO);
+		{
+			// скопировать pre_mul в auto_mul
+			memcpy(process->m_lr->auto_mul, process->m_lr->imgdata.color.pre_mul, sizeof(process->m_lr->auto_mul));
+			emit process->updateAutoWB();
+		}
 	}
-
-	process->updateParamControls(stage);
 
 	return 0;
 }
 
-void CProcessThread::updateParamControls(LibRaw_progress stage)
-{
-	// если LIBRAW_PROGRESS_IDENTIFY значит уже открыли файл
-	// LIBRAW_PROGRESS_SCALE_COLORS - обработка уже распакованного файла
-	if (!m_paramsUpdated && stage > LIBRAW_PROGRESS_IDENTIFY)
-	{
-		emit updateParamControls();
-		m_paramsUpdated = true; // больше мы сюда не зайдем
-	}
-}
-
 void CProcessThread::process()
 {
-	emit setProcess(false);
 	// сконвертировать m_filename и показать результат
 	try
 	{
@@ -107,6 +97,5 @@ void CProcessThread::process()
 	{
 		emit setProgress(tr("Something went wrong while the RAW file was being processed."));
 	}
-	emit setProcess(true);
 	emit finished();
 }

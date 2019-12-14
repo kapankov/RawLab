@@ -626,47 +626,6 @@ border-radius: 2px;
              </layout>
             </item>
             <item>
-             <widget class="SliderWidget" name="sliderWBGreen2" native="true">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>500</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Green2 WB channel</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="SliderWidget" name="sliderWBBlue" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>500</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Blue WB channel</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="SliderWidget" name="sliderWBRed" native="true">
               <property name="minimumSize">
                <size>
@@ -701,6 +660,47 @@ border-radius: 2px;
               </property>
               <property name="toolTip">
                <string>Green WB channel</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderWBBlue" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Blue WB channel</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderWBGreen2" native="true">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Green2 WB channel</string>
               </property>
              </widget>
             </item>
@@ -1171,6 +1171,7 @@ border-radius: 2px;
     <addaction name="actionCenter"/>
     <addaction name="separator"/>
     <addaction name="actionCMS"/>
+    <addaction name="actionSwitch_View"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1207,6 +1208,7 @@ border-radius: 2px;
    </attribute>
    <addaction name="action_Open"/>
    <addaction name="action_Save"/>
+   <addaction name="actionSave_Preview"/>
    <addaction name="separator"/>
    <addaction name="action_Process"/>
    <addaction name="separator"/>
@@ -1216,6 +1218,7 @@ border-radius: 2px;
    <addaction name="actionZoomToNormal"/>
    <addaction name="actionCenter"/>
    <addaction name="separator"/>
+   <addaction name="actionSwitch_View"/>
    <addaction name="actionCMS"/>
    <addaction name="separator"/>
    <addaction name="action_About"/>
@@ -1362,6 +1365,9 @@ border-radius: 2px;
    <property name="text">
     <string>&amp;Save</string>
    </property>
+   <property name="toolTip">
+    <string>Save processed RAW</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
    </property>
@@ -1370,16 +1376,10 @@ border-radius: 2px;
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Preview</string>
    </property>
    <property name="visible">
-    <bool>false</bool>
-   </property>
-   <property name="iconVisibleInMenu">
     <bool>false</bool>
    </property>
   </action>
@@ -1425,6 +1425,21 @@ border-radius: 2px;
    </property>
    <property name="shortcut">
     <string>F8</string>
+   </property>
+  </action>
+  <action name="actionSwitch_View">
+   <property name="icon">
+    <iconset resource="rawlab.qrc">
+     <normaloff>:/images/Resources/preview.png</normaloff>:/images/Resources/preview.png</iconset>
+   </property>
+   <property name="text">
+    <string>Switch View</string>
+   </property>
+   <property name="toolTip">
+    <string>Preview</string>
+   </property>
+   <property name="shortcut">
+    <string>F3</string>
    </property>
   </action>
  </widget>

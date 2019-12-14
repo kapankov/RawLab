@@ -86,6 +86,7 @@ public:
 	LibRawEx();
 
 	librawex_output_params_t exparams;
+	float auto_mul[4]; // рассчитывается в потоке (color.pre_mul при params.use_auto_wb=1)
 
 	std::array<float, 4> getAutoWB();
 

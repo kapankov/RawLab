@@ -39,6 +39,7 @@ private:
 
 	std::unique_ptr<LibRawEx> m_lr;
 	std::vector<wbpreset> m_wbpresets;
+	QString m_lastWBPreset;
 	// делитель для автоматического расчета второго зеленого канала Green2 баланса белого
 	float m_green2div;
 
@@ -56,7 +57,7 @@ private:
 	QLabel* m_plblInfo;
 
 	QString m_filename; // открытый файл
-	QAtomicInt m_inProcess; // запущен или нет поток выполнения обработки RAW
+	QThread m_thread; // объект управления потоком обработки RAW
 	RgbBuffPtr	m_pRawBuff;
 	// отслеживает изменения в каталоге с профилями камер
 	// и обновляет комбобокс Input Profiles
@@ -81,6 +82,7 @@ private:
 	void ExtractProcessedRaw();
 	void UpdateCms(bool enable);
 
+	void SetProcess(bool default);
 	void setWBSliders(const float(&mul)[4], bool setDefault = true);
 	// обновлять WB контролы только после распаковки RAW
 	void setWBControls(const float(&mul)[4], RAWLAB::WBSTATE wb);
@@ -92,9 +94,12 @@ private:
 	void updateGreen2Div();
 	void updateInputProfiles();
 	void updateOutputProfiles();
+	// check parameters before raw process
+	bool checkBeforeProcess();
 signals:
 	void cancelProcess();
 public slots:
+	void moveEvent(QMoveEvent* event);
 	void onOpen();
 	void onSave();
 	void onSavePreview();
@@ -106,6 +111,7 @@ public slots:
 	void onNextLeftPanel();
 	// показать Preview
 	void onShowPreview();
+	void onSwitchView();
 	// показать результат RAW-обработки
 	void onShowProcessedRaw();
 	// сменился профиль монитора
@@ -113,9 +119,8 @@ public slots:
 	// слоты для вызова из потока обработки RAW
 	void onProcessFinished();
 	void onSetProgress(const QString& text);
-	void onUpdateAutoWB(float* mul, RAWLAB::WBSTATE wb);
-	void onSetProcess(bool default);
-	void onUpdateParamControls();
+	void onUpdateAutoWB();
+	void onUpdateParamControls(const LibRawEx& lr);
 
 	void onZoomChanged(int prc);
 	void onPointerChanged(int x, int y);
