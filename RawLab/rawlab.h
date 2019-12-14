@@ -94,6 +94,8 @@ private:
 	void updateGreen2Div();
 	void updateInputProfiles();
 	void updateOutputProfiles();
+	// check parameters before raw process
+	bool checkBeforeProcess();
 signals:
 	void cancelProcess();
 public slots:

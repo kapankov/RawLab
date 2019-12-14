@@ -1208,6 +1208,7 @@ border-radius: 2px;
    </attribute>
    <addaction name="action_Open"/>
    <addaction name="action_Save"/>
+   <addaction name="actionSave_Preview"/>
    <addaction name="separator"/>
    <addaction name="action_Process"/>
    <addaction name="separator"/>
@@ -1363,6 +1364,9 @@ border-radius: 2px;
    </property>
    <property name="text">
     <string>&amp;Save</string>
+   </property>
+   <property name="toolTip">
+    <string>Save processed RAW</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>

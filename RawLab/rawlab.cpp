@@ -718,6 +718,31 @@ void RawLab::updateOutputProfiles()
 	}
 }
 
+bool RawLab::checkBeforeProcess()
+{
+	// Если используем icc-файл как выходной профиль, входной также должен быть icc-файлом и наоборот
+	// dcraw_process.cpp
+	// apply_profile(O.camera_profile, O.output_profile);
+	if (ui.cmbInputProfile->currentIndex() > 2 && ui.cmbOutProfile->currentIndex() < 7)
+	{
+		QMessageBox::critical(this, tr("RawLab error"),
+			QString(tr("Limitation: if you use the input icc profile of the camera (") + 
+				ui.cmbInputProfile->currentText() + tr("), "
+				"you cannot use the built-in color space as the output profile, "
+				"you must use the output icc profile.")));
+		return false;
+	}
+	else if (ui.cmbOutProfile->currentIndex() > 6 && ui.cmbInputProfile->currentIndex() < 3)
+	{
+		QMessageBox::critical(this, tr("RawLab error"),
+			QString(tr("Limitation: if you use the icc output profile (") + 
+				ui.cmbOutProfile->currentText() + 
+				tr("), you must also use the icc profile as the input profile.")));
+		return false;
+	}
+	return true;
+}
+
 void RawLab::openFile(const QString& filename)
 {
 	m_filename.clear();
@@ -1395,6 +1420,7 @@ void RawLab::onProcess()
 	}
 	if (!m_thread.isRunning())
 	{
+		if (!checkBeforeProcess()) return;
 		onShowPreview();
 		ui.actionProcessed_RAW->setChecked(false);
 		ui.actionProcessed_RAW->setVisible(false);
@@ -1484,13 +1510,21 @@ void RawLab::onProcess()
 			params.camera_profile = nullptr;
 			switch(ui.cmbInputProfile->currentIndex())
 			{
+			case 0:
+				// 0: do not use embedded color profile
+				params.use_camera_matrix = 0;
+				break;
 			case 1:
+				// 1 (default): use embedded color profile (if present) for DNG files (always); 
+				// for other files only if use_camera_wb is set;
 				params.use_camera_matrix = 1;
 				break;
 			case 2:
+				// 3: use embedded color data (if present) regardless of white balance setting.
 				params.use_camera_matrix = 3;
 				break;
 			default:
+				// use input profile (camera_profile)
 				params.use_camera_matrix = 0;
 				m_inputProfile = (getInputProfilesDir() + "/" + ui.cmbInputProfile->currentText()).toStdString();
 				params.camera_profile = const_cast<char*>(m_inputProfile.c_str());
