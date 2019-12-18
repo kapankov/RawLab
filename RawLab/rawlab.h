@@ -45,7 +45,6 @@ private:
 
 	CSettings m_settings;
 
-	QString m_lastDir;
 	QShortcut* m_MoveLeft;
 	QShortcut* m_MoveRight;
 	QShortcut* m_MoveUp;
@@ -106,6 +105,7 @@ public slots:
 	void onCms();
 	void onExit();
 	void onProcess();
+	void onSettings();
 	void onAbout();
 	// Переключение вкладок Process-Properties (Ctrl+Tab)
 	void onNextLeftPanel();

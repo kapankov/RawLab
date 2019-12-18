@@ -66,7 +66,6 @@ RawLab::RawLab(QWidget *parent)
 	m_settings.setPath(QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
 	m_settings.setDefaultValue(std::string("lastdir"),
 		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
-	m_lastDir = QString::fromStdString(m_settings.getValue(std::string("lastdir")));
 	m_settings.setDefaultValue(std::string("autogreen2"), std::string("true"));
 	m_settings.setDefaultValue(std::string("tiff"), std::string("true"));
 	m_settings.setDefaultValue(std::string("bps"), std::string("16"));
@@ -205,6 +204,9 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionProcessed_RAW, SIGNAL(triggered()), this, SLOT(onShowProcessedRaw()));
 	connect(ui.actionSwitch_View, SIGNAL(triggered()), this, SLOT(onSwitchView()));
 	connect(ui.actionCMS, SIGNAL(triggered()), this, SLOT(onCms()));
+	connect(ui.action_Settings, SIGNAL(triggered()), this, SLOT(onSettings()));
+	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
+
 	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
 	connect(ui.openGLWidget, SIGNAL(monitorProfileChanged(bool)), ui.histogram, SLOT(onMonitorProfileChanged(bool)));
 
@@ -227,7 +229,6 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.openGLWidget, SIGNAL(pointerChanged(int, int)), this, SLOT(onPointerChanged(int, int)));
 	connect(ui.openGLWidget, SIGNAL(scrollSizeChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollSizeChanged(int, int)));
 	connect(ui.openGLWidget, SIGNAL(scrollOffsetChanged(int, int)), ui.imageScrollWidget, SLOT(onScrollOffsetChanged(int, int)));
-	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 
 	connect(ui.cmbWhiteBalance, QOverload<int>::of(&QComboBox::activated),
 		[=](size_t index)
@@ -275,8 +276,6 @@ RawLab::~RawLab()
 		m_thread.exit();
 		m_thread.wait();
 	}
-
-	m_settings.setValue(std::string("lastdir"), m_lastDir.toStdString());
 
 	delete m_plblInfo;
 	delete m_plblScale;
@@ -801,8 +800,15 @@ void RawLab::onOpen()
 			QString(tr("Processing of the previous RAW file\n%1\nis in progress. Wait until the end of the operation.").arg(m_filename)));
 	else
 	{
+		bool fDontSaveLastDir = false;
+		QString lastDir = QString::fromStdString(m_settings.getValue(std::string("lastdir")));
+		if (!lastDir.isEmpty() && lastDir.at(0) == '!')
+		{
+			fDontSaveLastDir = true;
+			lastDir = lastDir.remove('!');
+		}
 		// можно в настройки вынести основные форматы RAW (в первой строке фильтра указывать)
-		QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), m_lastDir,
+		QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image File"), lastDir,
 			tr("Camera RAW files (*.dng *.cr2 *.cr3 *.nef *.raf *.3fr *.arw *.ciff *.crw *.dcr *.erf *.iiq *.k25 *.kdc *.mef *.mrw *.nrw *.orf *.pef *.raw *.rw2 *.rwl *.sr2 *.srf *.srw *x3f);;"
 				"Adobe Digital Negative files (*.dng);;"
 				"Canon RAW 2 files (*.cr2);;"
@@ -834,7 +840,8 @@ void RawLab::onOpen()
 				"All Files (*.*)")); // .toStdString();
 		if (!fileName.isEmpty())
 		{
-			m_lastDir = QFileInfo(fileName).dir().absolutePath();
+			if (!fDontSaveLastDir)
+				m_settings.setValue(std::string("lastdir"), QFileInfo(fileName).dir().absolutePath().toStdString());
 			openFile(fileName);
 		}
 	}
@@ -1567,6 +1574,39 @@ void RawLab::onProcess()
 	{
 		m_lr->setCancelFlag();
 		emit cancelProcess();
+	}
+}
+
+void RawLab::onSettings()
+{
+	std::string tiff = m_settings.getValue(std::string("tiff")); // .compare(std::string("true")) == 0;
+	std::string bps = m_settings.getValue(std::string("bps")); // .compare(std::string("16")) == 0;
+	SettingsDialog dialog(&m_settings, this);
+	if (dialog.exec())
+	{
+		// сохранить новые настройки
+		m_settings.setValue(std::string("lastdir"), dialog.getSaveLastDir().toStdString());
+		m_settings.setValue(std::string("autogreen2"), dialog.getAutoGreen2() ? std::string("true") : std::string("false"));
+		m_settings.setValue(std::string("tiff"), dialog.getTiff() ? std::string("true") : std::string("false"));
+		m_settings.setValue(std::string("bps"), dialog.getBps() ? std::string("16") : std::string("8"));
+		// если обработан RAW файл
+		if ((m_lr->imgdata.progress_flags & LIBRAW_PROGRESS_THUMB_MASK) >= LIBRAW_PROGRESS_PRE_INTERPOLATE)
+		{
+			// и новые настройки отличаются от старых
+			if (tiff.compare(m_settings.getValue(std::string("tiff")))
+				|| bps.compare(m_settings.getValue(std::string("bps"))))
+			{
+				// спросить применить новые настройки или нет (запустить обработку)?
+				QMessageBox msgBox;
+				msgBox.setText("Settings have been changed.");
+				msgBox.setInformativeText("Do you want to process the file with the new settings?");
+				msgBox.setStandardButtons(QMessageBox::Apply | QMessageBox::Cancel);
+				msgBox.setDefaultButton(QMessageBox::Apply);
+				if (msgBox.exec() == QMessageBox::Apply)
+					onProcess();
+			}
+		}
+		return;
 	}
 }
 

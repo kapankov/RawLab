@@ -33,6 +33,7 @@
 #include "jpeg.h"
 #include "bitmap.h"
 #include "settings.h"
+#include "settingsdlg.h"
 #include "librawex.h"
 #include "process_thread.h"
 #include "rawlab.h"

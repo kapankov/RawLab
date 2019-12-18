@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="images">
+    <file>Resources/settings.png</file>
     <file>Resources/preview.png</file>
     <file>Resources/rawview.png</file>
     <file>Resources/cmsoff.png</file>
@@ -26,5 +27,8 @@
     <file>Resources/about.png</file>
     <file>Resources/exit.png</file>
     <file>Resources/open.png</file>
+  </qresource>
+  <qresource prefix="stylesheet">
+    <file>stylesheet.qss</file>
   </qresource>
 </RCC>

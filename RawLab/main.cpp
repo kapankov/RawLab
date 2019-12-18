@@ -23,12 +23,21 @@
 int main(int argc, char *argv[])
 {
 	QCoreApplication::addLibraryPath("./");
-	QApplication a(argc, argv);
+	QApplication app(argc, argv);
+
+	// Load an application style
+	QFile styleFile(":/stylesheet/stylesheet.qss");
+	styleFile.open(QFile::ReadOnly);
+	// Apply the loaded stylesheet
+	QString style(styleFile.readAll());
+	app.setStyleSheet(style);
+
 	RawLab w;
 	w.show();
+	// get file from command line
 	if (argc > 0)
 	{
 		w.openFile(QString(argv[1]));
 	}
-	return a.exec();
+	return app.exec();
 }
