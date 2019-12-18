@@ -1474,7 +1474,7 @@ void RawLab::onProcess()
 					mul[3] = ui.sliderWBGreen2->getValue();
 				}
 			}
-			else m_wbpresets.clear();
+
 			// Exposure
 			params.exp_correc = 0;
 			params.exp_shift = 1.0f;
