@@ -42,6 +42,26 @@ QString outputProfiles[] = {
 	"ACES"
 };
 
+QString InterpolationModes[] = {
+	"No interpolation",
+	"Half size",
+	"0 - Linear",
+	"1-VNG",
+	"2-PPG",
+	"3-AHD",
+	"4-DCB",
+	"5-Modified AHD by Paul Lee (GPL2)",
+	"6-AFD, 5-pass (GPL2)",
+	"7-VCD (GPL2)",
+	"8-Mixed VCD/Modified AHD (GPL2)",
+	"9-LMMSE (GPL2)",
+	"10-AMaZE (GPL3)",
+	"11-DHT",
+	"12-AAHD by Anton Petrusevich",
+	"DCB with enhanced colors", // maxofim+1
+	"VCD with EECI refine" // maxofim+2
+};
+
 QString getInputProfilesDir()
 {
 	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/iprofiles";
@@ -184,6 +204,11 @@ RawLab::RawLab(QWidget *parent)
 	m_outputProfilesWatcher->addPath(getOutputProfilesDir());
 
 	connect(m_outputProfilesWatcher.get(), SIGNAL(directoryChanged(const QString&)), this, SLOT(onOutputProfilesDirChanged(const QString&)));
+
+	
+	for (auto item : InterpolationModes)
+		ui.cmbInterpolation->addItem(item);
+	ui.cmbInterpolation->setCurrentIndex(5);
 
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));
