@@ -109,6 +109,9 @@ public slots:
 	void onAbout();
 	// Переключение вкладок Process-Properties (Ctrl+Tab)
 	void onNextLeftPanel();
+	// переключения главной панели
+	void onMainPanelLeft();
+	void onMainPanelRight();
 	// показать Preview
 	void onShowPreview();
 	void onSwitchView();

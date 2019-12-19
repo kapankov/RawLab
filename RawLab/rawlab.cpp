@@ -83,6 +83,8 @@ RawLab::RawLab(QWidget *parent)
 	m_MoveDown = new QShortcut(this);
 	m_MoveDown->setKey(Qt::CTRL + Qt::Key_Down);
 
+	ui.action_Left->setChecked(true);
+
 	m_plblState = new QLabel(this);
 	m_plblProgress = new QLabel(this);
 	m_plblScale = new QLabel(this);
@@ -203,6 +205,8 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.actionPreview, SIGNAL(triggered()), this, SLOT(onShowPreview()));
 	connect(ui.actionProcessed_RAW, SIGNAL(triggered()), this, SLOT(onShowProcessedRaw()));
 	connect(ui.actionSwitch_View, SIGNAL(triggered()), this, SLOT(onSwitchView()));
+	connect(ui.action_Left, SIGNAL(triggered()), this, SLOT(onMainPanelLeft()));
+	connect(ui.action_Right, SIGNAL(triggered()), this, SLOT(onMainPanelRight()));
 	connect(ui.actionCMS, SIGNAL(triggered()), this, SLOT(onCms()));
 	connect(ui.action_Settings, SIGNAL(triggered()), this, SLOT(onSettings()));
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
@@ -1663,6 +1667,30 @@ void RawLab::onNextLeftPanel()
 {
 	int ci = ui.tabWidget->currentIndex();
 	ui.tabWidget->setCurrentIndex(ci < ui.tabWidget->count()-1 ? ci+1 : 0);
+}
+
+void RawLab::onMainPanelLeft()
+{
+	if (ui.action_Right->isChecked())
+	{
+		QHBoxLayout* layout = qobject_cast<QHBoxLayout*>(ui.centralWidget->layout());
+		layout->removeWidget(ui.tabWidget);
+		layout->insertWidget(0, ui.tabWidget);
+		ui.action_Right->setChecked(false);
+	}
+	ui.action_Left->setChecked(true);
+}
+
+void RawLab::onMainPanelRight()
+{
+	if (ui.action_Left->isChecked())
+	{
+		QHBoxLayout* layout = qobject_cast<QHBoxLayout*>(ui.centralWidget->layout());
+		layout->removeWidget(ui.tabWidget);
+		layout->insertWidget(1, ui.tabWidget);
+		ui.action_Left->setChecked(false);
+	}
+	ui.action_Right->setChecked(true);
 }
 
 void RawLab::onShowPreview()

@@ -733,6 +733,13 @@
      <addaction name="actionZoom_400"/>
      <addaction name="actionZoom_800"/>
     </widget>
+    <widget class="QMenu" name="menuMain_panel">
+     <property name="title">
+      <string>Main &amp;panel</string>
+     </property>
+     <addaction name="action_Left"/>
+     <addaction name="action_Right"/>
+    </widget>
     <addaction name="actionPreview"/>
     <addaction name="actionProcessed_RAW"/>
     <addaction name="separator"/>
@@ -741,6 +748,7 @@
     <addaction name="separator"/>
     <addaction name="actionCMS"/>
     <addaction name="actionSwitch_View"/>
+    <addaction name="menuMain_panel"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1021,6 +1029,22 @@
    </property>
    <property name="text">
     <string>&amp;Settings</string>
+   </property>
+  </action>
+  <action name="action_Left">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Left</string>
+   </property>
+  </action>
+  <action name="action_Right">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Right</string>
    </property>
   </action>
  </widget>
