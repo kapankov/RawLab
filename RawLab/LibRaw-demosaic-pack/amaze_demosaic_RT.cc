@@ -55,7 +55,7 @@ void CLASS amaze_demosaic_RT() {
 	
     float clip_pt =MIN(MIN(pre_mul[0],pre_mul[1]),pre_mul[2]);
 
-	int winx=0, winy=0,winw=width, winh=height;
+	int winx = 0, winy = 0;//, winw = width, winh = height;
 
 	//offset of R pixel within a Bayer quartet
 	int ex, ey;
@@ -67,16 +67,16 @@ void CLASS amaze_demosaic_RT() {
 	static const int nbr[5] = {-v2,-2,2,v2,0};
 
 	//tolerance to avoid dividing by zero
-	static const float eps=1e-5, epssq=1e-10;			//tolerance to avoid dividing by zero
+	static const float eps=1e-5f, epssq=1e-10f;			//tolerance to avoid dividing by zero
 
 	//adaptive ratios threshold
-	static const float arthresh=0.75;
+	static const float arthresh=0.75f;
 	//nyquist texture test threshold
-	static const float nyqthresh=0.5;
+	static const float nyqthresh=0.5f;
 	//diagonal interpolation test threshold
-	static const float pmthresh=0.25;
+	static const float pmthresh=0.25f;
 	//factors for bounding interpolation in saturated regions
-	static const float lbd=1.0, ubd=1.0; //lbd=0.66, ubd=1.5 alternative values;
+	static const float lbd=1.0f, ubd=1.0f; //lbd=0.66, ubd=1.5 alternative values;
 
 	//gaussian on 5x5 quincunx, sigma=1.2
 	static const float gaussodd[4] = {0.14659727707323927f, 0.103592713382435f, 0.0732036125103057f, 0.0365543548389495f};
@@ -90,7 +90,7 @@ void CLASS amaze_demosaic_RT() {
 	//guassian on quincunx grid
 	static const float gquinc[4] = {0.169917f, 0.108947f, 0.069855f, 0.0287182f};
 
-	volatile double progress = 0.0;
+//	volatile double progress = 0.0;
 #ifdef DCRAW_VERBOSE
 			        if (verbose) printf ("AMaZE interpolation v20b OMP[E.Martinec]\n");
 #endif

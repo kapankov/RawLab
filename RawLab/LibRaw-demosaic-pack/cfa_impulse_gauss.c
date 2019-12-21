@@ -35,13 +35,13 @@ void CLASS cfa_impulse_gauss(float lclean, float cclean)
 {  
 	double dt;
 	clock_t t1, t2;
-	int winx=0, winy=0,winw=width, winh=height;
+	int /*winx=0, winy=0,*/ winw=width, winh=height;
 
-	int compt=0, compt10=0,compt50=0,compt250=0,compt500=0,comptmax=0;
+//	int compt=0, compt10=0, compt50=0, compt250=0, compt500=0, comptmax=0;
 	static const int border=8;
-	int rayo=1; // RawLab fix	,i,d;
-	int compte1=0;
-	static const float eps1=1e-10;
+//	int rayo=1,i,d;
+//	int compte1=0;
+	static const float eps1=1e-10f;
 	
 #ifdef DCRAW_VERBOSE
 	if (verbose) fprintf (stderr,_("CFA impulse-hot and gaussian denoise [E.Martinec +JD] g:%1.4f  br:%1.4f\n"), lclean,cclean);

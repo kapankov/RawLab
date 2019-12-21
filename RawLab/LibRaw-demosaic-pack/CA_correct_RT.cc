@@ -173,7 +173,7 @@ void CLASS CA_correct_RT(float cared, float cablue)
 	//shifts to location of vertical and diagonal neighbors
 	const int v1=TS, v2=2*TS, /* v3=3*TS,*/ v4=4*TS;//, p1=-TS+1, p2=-2*TS+2, p3=-3*TS+3, m1=TS+1, m2=2*TS+2, m3=3*TS+3;
 	
-	float eps=1e-5, eps2=1e-10;	//tolerance to avoid dividing by zero
+	float eps=1e-5f, eps2=1e-10f;	//tolerance to avoid dividing by zero
 	
 	//adaptive weights for green interpolation
 	float	wtu, wtd, wtl, wtr;
@@ -203,7 +203,7 @@ void CLASS CA_correct_RT(float cared, float cablue)
 	float	glpfh, glpfv;
 	
 	//max allowed CA shift
-	const float bslim = 3.99;
+	const float bslim = 3.99f;
 	//gaussians for low pass filtering of G and R/B
 	//static const float gaussg[5] = {0.171582, 0.15839, 0.124594, 0.083518, 0.0477063};//sig=2.5
 	//static const float gaussrb[3] = {0.332406, 0.241376, 0.0924212};//sig=1.25

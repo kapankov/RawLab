@@ -33,6 +33,7 @@ void CLASS vcd_interpolate(int ahd_cutoff)
 #ifdef DCRAW_VERBOSE
 	if (verbose) fprintf(stderr,_("VCD interpolation...\n"));
 #endif
+	v0 = 0; // C4701 warning fix
 	t1 = clock();
 	/* assume VCD's T value is based on gamma=2.22 test images */
 	T = 2;

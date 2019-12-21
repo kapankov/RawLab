@@ -32,7 +32,8 @@ void HistogramWidget::onImageChanged(RgbBuff* rgbBuff)
 					else
 						k = buff[n + c];
 					unsigned int& t = hg[k];
-					if (t != UINT_MAX) // на случай переполнения
+					// на случай переполнения
+					if (t != UINT_MAX)
 						t++;
 				}
 		}

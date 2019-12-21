@@ -79,16 +79,13 @@ bool CSettings::setValue(const std::string& name, const std::string& value)
 	// value может быть пустым
 	if (name.empty()/* || value.empty()*/) return false;
 
-	std::unique_ptr<xmlChar[]> nodeName = stringToXmlChar(name);
-	if (!nodeName) return false;
-	std::unique_ptr<xmlChar[]> nodeContent = stringToXmlChar(value);
-//	if (!nodeContent) return false;
-
 	xmlDocPtr doc = xmlParseFile(m_path.c_str());
 	if (doc == nullptr)
 		doc = xmlNewDoc(BAD_CAST "1.0");
 	if (doc)
 	{
+		std::unique_ptr<xmlChar[]> nodeName = stringToXmlChar(name);
+		std::unique_ptr<xmlChar[]> nodeContent = stringToXmlChar(value);
 		setValue(doc, nodeName.get(), nodeContent.get());
 		xmlFreeDoc(doc);
 	}

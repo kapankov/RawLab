@@ -40,7 +40,7 @@ void CLASS cfa_linedn(float linenoise){
 	double dt;
 	clock_t t1, t2;
 
-	float eps=1e-5;			//tolerance to avoid dividing by zero
+	float eps=1e-5f;			//tolerance to avoid dividing by zero
 	const float clip_pt = (1.0 / MIN(MIN(pre_mul[0],pre_mul[1]),pre_mul[2]));  // for highlights
 	const float gauss[5] = {0.20416368871516755f, 0.18017382291138087f, 0.1238315368057753f, 0.0662822452863612f, 0.02763055063889883f};
 	const float rolloff[8] = {.0f, 0.135335f, 0.249352f, 0.411112f, 0.606531f, 0.800737f, 0.945959f, 1.0f}; //gaussian with sigma=3

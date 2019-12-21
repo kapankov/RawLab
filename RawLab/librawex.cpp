@@ -51,7 +51,7 @@ std::array<float, 4> LibRawEx::getAutoWB()
 							}
 							else
 								val = imgdata.image[y * width + x][c];
-							if (val > maximum - 25)
+							if (val > (int)(maximum - 25))
 								goto skip_block;
 							if ((val -= cblack[c]) < 0)
 								val = 0;
@@ -82,7 +82,10 @@ std::array<float, 4> LibRawEx::getAutoWB()
 #define LIBRAW_LIBRARY_BUILD
 #define LIBRAW_IO_REDEFINED
 #include "libraw/libraw.h"
+#pragma warning(push)
+#pragma warning(disable: 4505)
 #include "internal/defines.h"
+#pragma warning(pop)
 #define SRC_USES_SHRINK
 #define SRC_USES_BLACK
 #define SRC_USES_CURVE

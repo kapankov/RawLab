@@ -29,6 +29,7 @@ void CLASS lmmse_interpolate(int gamma_apply)
 #ifdef DCRAW_VERBOSE
   if (verbose) fprintf(stderr,_("LMMSE interpolation...\n"));
 #endif
+  glut = 0; // C4703 warning fix
   t1 = clock();
   // allocate work with boundary
   ba = 10;
@@ -259,7 +260,7 @@ void CLASS lmmse_interpolate(int gamma_apply)
 	  if (ii != c) {
 	    v0 = rix[0][ii];
 	    if (v0 <= 0.04045)
-	      v0 /= 12.92;
+	      v0 /= 12.92f;
 	    else
 	      v0 = pow((v0 + 0.055)/1.055,2.4);
 	    pix[0][ii] = CLIP((int)(65535.0*v0 + 0.5)); } }
