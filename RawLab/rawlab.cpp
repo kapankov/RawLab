@@ -18,7 +18,7 @@ const QString highlightModes[] = {
 };
 
 const std::tuple<QString, double, double>  gammaCurves[] = {
-	{"BT.709 (REC.709)", 2.222, 4.5},
+	{"BT.709 (REC.709)", 2.2222, 4.5},
 	{"sRGB", 2.4, 12.92}, 
 	{"L* (L-star)", 3.0, 9.033},
 	{"Linear Curve", 1.0, 1.0},
@@ -40,6 +40,26 @@ QString outputProfiles[] = {
 	"ProPhoto D65",
 	"XYZ D65",
 	"ACES"
+};
+
+QString InterpolationModes[] = {
+	"No interpolation",
+	"Half size",
+	"0 - Linear",
+	"1-VNG",
+	"2-PPG",
+	"3-AHD",
+	"4-DCB",
+	"5-Modified AHD by Paul Lee (GPL2)",
+	"6-AFD, 5-pass (GPL2)",
+	"7-VCD (GPL2)",
+	"8-Mixed VCD/Modified AHD (GPL2)",
+	"9-LMMSE (GPL2)",
+	"10-AMaZE (GPL3)",
+	"11-DHT",
+	"12-AAHD by Anton Petrusevich",
+	"DCB with enhanced colors",
+	"VCD with EECI refine"
 };
 
 QString getInputProfilesDir()
@@ -186,6 +206,23 @@ RawLab::RawLab(QWidget *parent)
 	m_outputProfilesWatcher->addPath(getOutputProfilesDir());
 
 	connect(m_outputProfilesWatcher.get(), SIGNAL(directoryChanged(const QString&)), this, SLOT(onOutputProfilesDirChanged(const QString&)));
+
+	
+	for (auto item : InterpolationModes)
+		ui.cmbInterpolation->addItem(item);
+	ui.cmbInterpolation->setCurrentIndex(5);
+
+	ui.sliderDcbIterations->setLabel(tr("DCB iterations:"));
+	ui.sliderDcbIterations->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderDcbIterations->setRange(10.0, 0.0, DECIMAL0);
+	ui.sliderDcbIterations->setDefaultValue(0);
+	ui.sliderDcbIterations->setValue(0);
+
+	ui.sliderMedFilterPasses->setLabel(tr("Median filter passes:"));
+	ui.sliderMedFilterPasses->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderMedFilterPasses->setRange(10.0, 0.0, DECIMAL0);
+	ui.sliderMedFilterPasses->setDefaultValue(0);
+	ui.sliderMedFilterPasses->setValue(0);
 
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));
@@ -460,10 +497,12 @@ void RawLab::onGammaSlope(double /*gamma*/, double /*slope*/)
 	int decGamma = std::get<2>(ui.sliderGamma->getRange());
 	int decSlope = std::get<2>(ui.sliderSlope->getRange());
 
+	float gamma = static_cast<float>(ui.sliderGamma->getValue());
+	float slope = static_cast<float>(ui.sliderSlope->getValue());
 	for (auto item : gammaCurves)
 	{
-		if (fabs(static_cast<float>(ui.sliderGamma->getValue()) - std::get<1>(item)) < (1 / std::pow(10, decGamma)) &&
-			fabs(static_cast<float>(ui.sliderSlope->getValue()) - std::get<2>(item)) < (1 / std::pow(10, decSlope)))
+		if (fabs(gamma - std::get<1>(item)) < (1 / std::pow(10, decGamma)) &&
+			fabs(slope - std::get<2>(item)) < (1 / std::pow(10, decSlope)))
 		{
 			ui.cmbGammaCurve->setCurrentText(std::get<0>(item));
 			return;
@@ -476,6 +515,7 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 {
 	const libraw_data_t& imgdata = lr.imgdata;
 	const libraw_output_params_t &params = imgdata.params;
+	const librawex_output_params_t& exparams = lr.exparams;
 	const libraw_colordata_t &color = imgdata.color;
 	float tempwb[4] = { 1.0f,1.0f,1.0f,1.0f };
 	auto safewb = [&tempwb](const float(&mul)[4]) -> float(&)[4]
@@ -618,6 +658,47 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 
 	ui.cmbHighlightMode->setCurrentIndex(params.highlight < ui.cmbHighlightMode->count()? params.highlight : ui.cmbHighlightMode->count()-1);
 
+	ui.sliderGamma->setValue(1/params.gamm[0]);
+	ui.sliderSlope->setValue(params.gamm[1]);
+	onGammaSlope(1 / params.gamm[0], params.gamm[1]);
+
+	if (params.camera_profile)
+	{
+		QFileInfo fi(QString(params.camera_profile));
+		ui.cmbInputProfile->setCurrentText(fi.fileName());
+	}
+	else
+	{
+		switch (params.use_camera_matrix)
+		{
+		case 1:
+			ui.cmbInputProfile->setCurrentIndex(1);
+			break;
+		case 3:
+			ui.cmbInputProfile->setCurrentIndex(2);
+			break;
+		default:
+			ui.cmbInputProfile->setCurrentIndex(0);
+		}
+	}
+
+	if (params.output_color > 6)
+	{
+		QFileInfo fi(QString(params.output_profile));
+		ui.cmbOutProfile->setCurrentText(fi.fileName());
+	}
+	else
+		ui.cmbOutProfile->setCurrentIndex(params.output_color);
+	
+	if (params.dcb_enhance_fl && params.user_qual == 4)
+		ui.cmbInterpolation->setCurrentIndex(sizeof(InterpolationModes) / sizeof(QString) - 2); // DCB with enhanced colors
+	else if (exparams.eeci_refine && params.user_qual == 7)
+		ui.cmbInterpolation->setCurrentIndex(sizeof(InterpolationModes) / sizeof(QString) - 1); // VCD with EECI refine
+	else 
+		ui.cmbInterpolation->setCurrentIndex(params.no_interpolation ? 0 : (params.half_size ? 1 : 2 + (params.user_qual == -1 ? 3 : params.user_qual)));
+
+	ui.sliderDcbIterations->setValue(params.dcb_iterations);
+	ui.sliderMedFilterPasses->setValue(params.med_passes);
 }
 
 int RawLab::getWbPreset(const QString& lastPreset) const
@@ -1217,6 +1298,28 @@ void RawLab::fillProperties(const LibRawEx & lr)
 	}
 
 	addPropertiesSection(tr("Color"));
+	switch (lr.imgdata.color.ExifColorSpace)
+	{
+	case LIBRAW_COLORSPACE_AdobeRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("AdobeRGB"));
+		break;
+	case LIBRAW_COLORSPACE_sRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("sRGB"));
+		break;
+	default:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("Unknown"));
+	}
+	switch (lr.imgdata.makernotes.common.ColorSpace)
+	{
+	case LIBRAW_COLORSPACE_AdobeRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("AdobeRGB"));
+		break;
+	case LIBRAW_COLORSPACE_sRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("sRGB"));
+		break;
+	default:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("Unknown"));
+	}
 	addPropertiesItem(tr("Black level"), QString::number(lr.imgdata.color.black));
 	addPropertiesItem(tr("Maximum"), QString::number(lr.imgdata.color.maximum));
 	addPropertiesItem(tr("WB as shot"), QString("%1 %2 %3 %4")
@@ -1288,15 +1391,15 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 			if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
 			{
 				RgbBuffPtr pRgbBuff = GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true);
-				// определим настройку ColorSpace для камер Canon (остальные камеры не изучены)
-				if (imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Canon)
-				{
-					if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
-					CmsParams* params = pRgbBuff->m_params.get();
-					params->m_iColorSpace = imgdata.makernotes.canon.ColorSpace == 2 ? 2 : 1;
-					if (params->m_iColorSpace == 2)
-						params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
-				}
+				
+				if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
+				CmsParams* params = pRgbBuff->m_params.get();
+				// определим настройку ColorSpace
+				params->m_iColorSpace = 
+					(imgdata.makernotes.common.ColorSpace == LIBRAW_COLORSPACE_AdobeRGB || 
+						imgdata.color.ExifColorSpace == LIBRAW_COLORSPACE_AdobeRGB) ? 2 : 1;
+				if (params->m_iColorSpace == 2)
+					params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
 				result = ui.openGLWidget->setRgbBuff(std::move(pRgbBuff));
 			}
 			else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
@@ -1440,6 +1543,7 @@ void RawLab::onProcess()
 		// взять параметры из UI
 		{
 			libraw_output_params_t &params = m_lr->imgdata.params;
+			librawex_output_params_t &exparams = m_lr->exparams;
 			// tiff or ppm/pgm output format
 			params.output_tiff = m_settings.getValue(std::string("tiff")).compare(std::string("true")) == 0 ? 1 : 0;
 			// 16 or 8 bit support
@@ -1551,6 +1655,65 @@ void RawLab::onProcess()
 				m_outputProfile = (getOutputProfilesDir() + "/" + ui.cmbOutProfile->currentText()).toStdString();
 				params.output_profile = const_cast<char*>(m_outputProfile.c_str());
 			}
+			// interpolation
+			params.dcb_enhance_fl = 0; // используется только в режиме DCB with enhanced colors
+			exparams.eeci_refine = 0; // используется только в режиме VCD with EECI refine
+			auto setUserQual = [&params](int user_qual) // help lambda
+			{
+				params.no_interpolation = 0;
+				params.half_size = 0;
+				params.user_qual = user_qual;
+			};
+			auto setSpecialQual = [&params](int noInterpolation) // help lambda
+			{
+				params.no_interpolation = noInterpolation;
+				params.half_size = noInterpolation? 0 : 1;
+				params.user_qual = -1;
+			};
+
+			const int iInterpolationMode = ui.cmbInterpolation->currentIndex();
+			switch (iInterpolationMode)
+			{
+			case 0: // no interpolation
+				setSpecialQual(1);
+				break;
+			case 1: // half-size
+				setSpecialQual(0);
+				break;
+			case 2: // linear interpolation
+			case 3: // VNG interpolation
+			case 4: // PPG interpolation
+			case 5: // AHD interpolation
+			case 6: // DCB interpolation
+			case 13: // DHT intepolation
+			case 14: // Modified AHD intepolation (by Anton Petrusevich)
+				setUserQual(iInterpolationMode-2);
+				break;
+			case 7: // Modified AHD by Paul Lee (GPL2)
+			case 8: // AFD, 5-pass (GPL2)
+			case 9: // VCD (GPL2)
+			case 10: // Mixed VCD/Modified AHD (GPL2)
+			case 11: // LMMSE (GPL2)
+			case 12: // AMaZE (GPL3)
+				setUserQual(iInterpolationMode - 2);
+				m_lr->set_interpolate_bayer_cb(NULL, true);
+				break;
+			case 15: // DCB with enhanced colors
+				setUserQual(4); // DCB
+				params.dcb_enhance_fl = 1;
+				break;
+			case 16: // VCD with EECI refine
+				setUserQual(8); // Mixed VCD/Modified AHD interpolation
+				exparams.eeci_refine = 1;
+				m_lr->set_post_interpolate_cb(NULL, true);
+				break;
+			default:
+				setUserQual(-1); // default AHD*/
+			}
+
+			params.dcb_iterations = static_cast<int>(ui.sliderDcbIterations->getValue());
+			params.med_passes = static_cast<int>(ui.sliderMedFilterPasses->getValue());
+
 		}
 		SetProcess(false);
 		CProcessThread* process = new CProcessThread(m_lr.get(), m_filename);
