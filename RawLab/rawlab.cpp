@@ -1312,13 +1312,13 @@ void RawLab::fillProperties(const LibRawEx & lr)
 	switch (lr.imgdata.makernotes.common.ColorSpace)
 	{
 	case LIBRAW_COLORSPACE_AdobeRGB:
-		addPropertiesItem(tr("Exif ColorSpace"), tr("AdobeRGB"));
+		addPropertiesItem(tr("Makernotes ColorSpace"), tr("AdobeRGB"));
 		break;
 	case LIBRAW_COLORSPACE_sRGB:
-		addPropertiesItem(tr("Exif ColorSpace"), tr("sRGB"));
+		addPropertiesItem(tr("Makernotes ColorSpace"), tr("sRGB"));
 		break;
 	default:
-		addPropertiesItem(tr("Exif ColorSpace"), tr("Unknown"));
+		addPropertiesItem(tr("Makernotes ColorSpace"), tr("Unknown"));
 	}
 	addPropertiesItem(tr("Black level"), QString::number(lr.imgdata.color.black));
 	addPropertiesItem(tr("Maximum"), QString::number(lr.imgdata.color.maximum));
