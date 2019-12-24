@@ -293,6 +293,8 @@ double SliderWidget::getValue() const
 
 QString SliderWidget::getStrValue(double value) const
 {
+	if (m_decimals == 0)
+		return QString::number(static_cast<int>(value));
 	QString s = QString("%1").arg(value, 0, 'f', m_decimals);
 	if (s.contains(QRegExp("[,.]*")))
 	{

@@ -212,6 +212,18 @@ RawLab::RawLab(QWidget *parent)
 		ui.cmbInterpolation->addItem(item);
 	ui.cmbInterpolation->setCurrentIndex(5);
 
+	ui.sliderDcbIterations->setLabel(tr("DCB iterations:"));
+	ui.sliderDcbIterations->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderDcbIterations->setRange(10.0, 0.0, DECIMAL0);
+	ui.sliderDcbIterations->setDefaultValue(0);
+	ui.sliderDcbIterations->setValue(0);
+
+	ui.sliderMedFilterPasses->setLabel(tr("Median filter passes:"));
+	ui.sliderMedFilterPasses->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderMedFilterPasses->setRange(10.0, 0.0, DECIMAL0);
+	ui.sliderMedFilterPasses->setDefaultValue(0);
+	ui.sliderMedFilterPasses->setValue(0);
+
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));
 
@@ -685,6 +697,8 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 	else 
 		ui.cmbInterpolation->setCurrentIndex(params.no_interpolation ? 0 : (params.half_size ? 1 : 2 + (params.user_qual == -1 ? 3 : params.user_qual)));
 
+	ui.sliderDcbIterations->setValue(params.dcb_iterations);
+	ui.sliderMedFilterPasses->setValue(params.med_passes);
 }
 
 int RawLab::getWbPreset(const QString& lastPreset) const
@@ -1284,6 +1298,28 @@ void RawLab::fillProperties(const LibRawEx & lr)
 	}
 
 	addPropertiesSection(tr("Color"));
+	switch (lr.imgdata.color.ExifColorSpace)
+	{
+	case LIBRAW_COLORSPACE_AdobeRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("AdobeRGB"));
+		break;
+	case LIBRAW_COLORSPACE_sRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("sRGB"));
+		break;
+	default:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("Unknown"));
+	}
+	switch (lr.imgdata.makernotes.common.ColorSpace)
+	{
+	case LIBRAW_COLORSPACE_AdobeRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("AdobeRGB"));
+		break;
+	case LIBRAW_COLORSPACE_sRGB:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("sRGB"));
+		break;
+	default:
+		addPropertiesItem(tr("Exif ColorSpace"), tr("Unknown"));
+	}
 	addPropertiesItem(tr("Black level"), QString::number(lr.imgdata.color.black));
 	addPropertiesItem(tr("Maximum"), QString::number(lr.imgdata.color.maximum));
 	addPropertiesItem(tr("WB as shot"), QString("%1 %2 %3 %4")
@@ -1355,23 +1391,15 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 			if (mem_thumb->type == LIBRAW_IMAGE_JPEG)
 			{
 				RgbBuffPtr pRgbBuff = GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true);
-				// определим настройку ColorSpace для камер Canon и Nikon (остальные камеры не изучены)
-				if (imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Canon)
-				{
-					if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
-					CmsParams* params = pRgbBuff->m_params.get();
-					params->m_iColorSpace = imgdata.makernotes.canon.ColorSpace == 2 ? 2 : 1;
-					if (params->m_iColorSpace == 2)
-						params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
-				}
-				else if (imgdata.idata.maker_index == LIBRAW_CAMERAMAKER_Nikon)
-				{
-					if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
-					CmsParams* params = pRgbBuff->m_params.get();
-					params->m_iColorSpace = imgdata.makernotes.nikon.ColorSpace == 2 ? 2 : 1;
-					if (params->m_iColorSpace == 2)
-						params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
-				}
+				
+				if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
+				CmsParams* params = pRgbBuff->m_params.get();
+				// определим настройку ColorSpace
+				params->m_iColorSpace = 
+					(imgdata.makernotes.common.ColorSpace == LIBRAW_COLORSPACE_AdobeRGB || 
+						imgdata.color.ExifColorSpace == LIBRAW_COLORSPACE_AdobeRGB) ? 2 : 1;
+				if (params->m_iColorSpace == 2)
+					params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
 				result = ui.openGLWidget->setRgbBuff(std::move(pRgbBuff));
 			}
 			else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)
@@ -1682,6 +1710,9 @@ void RawLab::onProcess()
 			default:
 				setUserQual(-1); // default AHD*/
 			}
+
+			params.dcb_iterations = static_cast<int>(ui.sliderDcbIterations->getValue());
+			params.med_passes = static_cast<int>(ui.sliderMedFilterPasses->getValue());
 
 		}
 		SetProcess(false);
