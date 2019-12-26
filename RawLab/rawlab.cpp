@@ -230,6 +230,7 @@ RawLab::RawLab(QWidget *parent)
 	ui.imageScrollWidget->setViewport(ui.openGLWidget);
 
 	// connections
+	connect(&m_timer, SIGNAL(timeout()), SLOT(onTimerEvent()));
 	connect(m_NextLeftPanelShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this), &QShortcut::activated, this, &RawLab::onNextLeftPanel);
 
 	connect(this, SIGNAL(setProperties(const QVector< QPair<QString, QString> >&)), 
@@ -249,7 +250,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 
 	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
-	connect(ui.openGLWidget, SIGNAL(monitorProfileChanged(bool)), ui.histogram, SLOT(onMonitorProfileChanged(bool)));
+	connect(ui.openGLWidget, SIGNAL(monitorProfileChanged(bool)), this, SLOT(onMonitorProfileChanged(bool)));
 
 	connect(ui.action_Process, SIGNAL(triggered()), this, SLOT(onProcess()));
 	connect(ui.actionZoom_In, SIGNAL(triggered()), ui.openGLWidget, SLOT(onZoomIn()));
@@ -874,6 +875,12 @@ void RawLab::openFile(const QString& filename)
 
 void RawLab::moveEvent(QMoveEvent* /*event*/)
 {
+	m_timer.start(1000);
+}
+
+void RawLab::onTimerEvent()
+{
+	m_timer.stop();
 	ui.openGLWidget->checkProfile();
 }
 
@@ -939,6 +946,7 @@ void RawLab::onMonitorProfileChanged(bool enable)
 		ui.actionCMS->setToolTip(QString("%1\n%2").arg("CMS is On (F8)", monProfile.isEmpty() ? "No profile" : monProfile));
 	else
 		ui.actionCMS->setToolTip(QString("%1\n%2").arg("CMS is Off (F8)", monProfile.isEmpty() ? "No profile" : monProfile));
+	::OutputDebugString((monProfile + "\n").toStdWString().c_str());
 }
 
 void RawLab::onUpdateAutoWB()

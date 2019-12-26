@@ -14,14 +14,13 @@ RenderWidget::RenderWidget(QWidget * parent)
 	, m_CmsState(false)
 {
 	resetCenter();
-	m_MonitorNumber = getMonitorNumber();
 }
 
 RenderWidget::~RenderWidget()
 {
 }
 
-bool RenderWidget::setRgbBuff(RgbBuffPtr ptr)
+bool RenderWidget::setRgbBuff(RgbBuffPtr&& ptr)
 {
 	m_pImgBuff = std::move(ptr);
 	// сообщить об изменении картинки (например, для создания гистограммы в приложении)
@@ -29,7 +28,7 @@ bool RenderWidget::setRgbBuff(RgbBuffPtr ptr)
 	return UpdateImage();
 }
 
-void RenderWidget::setEmptyLabel(QString label)
+void RenderWidget::setEmptyLabel(const QString& label)
 {
 	m_EmptyLabel = label;
 }
@@ -39,7 +38,6 @@ void RenderWidget::enableCms(bool enable)
 	m_CmsState = enable;
 	if (m_CmsState)
 	{
-		m_MonitorNumber = getMonitorNumber();
 		setMonitorProfile(QString::fromStdString(GetMonitorProfile(reinterpret_cast<HWND>(winId()))));
 	}
 	// update something
@@ -56,19 +54,22 @@ QString RenderWidget::getMonitorProfile() const
 	return m_MonitorProfilePath;
 }
 
-void RenderWidget::setMonitorProfile(QString profile)
+bool RenderWidget::setMonitorProfile(const QString& profile)
 {
 	if (m_MonitorProfilePath.compare(profile))
 	{
 		m_MonitorProfilePath = profile;
 		emit monitorProfileChanged(m_CmsState);
+		::OutputDebugString((QString("Monitor profile was changed: ") + m_MonitorProfilePath + QString("\n")).toStdWString().c_str());
+		return true;
 	}
+	return false;
 }
 
 void RenderWidget::checkProfile()
 {
-	if (m_CmsState && m_MonitorNumber != getMonitorNumber())
-			enableCms(true);
+	if (m_CmsState && setMonitorProfile(QString::fromStdString(GetMonitorProfile(reinterpret_cast<HWND>(winId())))))
+		UpdateImage(false);
 }
 
 bool RenderWidget::UpdateImage(bool resetZoom)
@@ -129,7 +130,6 @@ bool RenderWidget::UpdateImage(bool resetZoom)
 						params&& params->m_iColorSpace == 0 && abs(params->cam_xyz[0][0]) > FLT_EPSILON ? params->cam_xyz : nullptr,
 						params&& params->m_iColorSpace == -1 ? params->output_profile.c_str() : nullptr
 					);
-				::OutputDebugString((m_MonitorProfilePath + "\n").toStdWString().c_str());
 				pixels = pCmsImgBuff->m_buff;
 			}
 

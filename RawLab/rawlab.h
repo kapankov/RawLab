@@ -36,8 +36,10 @@ public:
 	void openFile(const QString& filename);
 private:
 	Ui::RawLabClass ui;
-
+	// для отслеживания смены монитора при перемещении главного окна
+	QTimer m_timer;
 	std::unique_ptr<LibRawEx> m_lr;
+
 	std::vector<wbpreset> m_wbpresets;
 	QString m_lastWBPreset;
 	// делитель для автоматического расчета второго зеленого канала Green2 баланса белого
@@ -99,6 +101,7 @@ signals:
 	void cancelProcess();
 public slots:
 	void moveEvent(QMoveEvent* event);
+	void onTimerEvent();
 	void onOpen();
 	void onSave();
 	void onSavePreview();
