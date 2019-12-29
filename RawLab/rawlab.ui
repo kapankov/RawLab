@@ -131,9 +131,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-233</y>
+             <y>-298</y>
              <width>331</width>
-             <height>605</height>
+             <height>674</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -658,6 +658,36 @@
               </property>
               <property name="toolTip">
                <string>Number of median filter passes</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="NoValuesScale">
+              <property name="text">
+               <string>Disable pixel values scaling</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="InterpAs4Colors">
+              <property name="text">
+               <string>Interpolate RGGB as 4 colors</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="GreenMatch">
+              <property name="text">
+               <string>Green Matching</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

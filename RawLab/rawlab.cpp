@@ -700,6 +700,9 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 
 	ui.sliderDcbIterations->setValue(params.dcb_iterations);
 	ui.sliderMedFilterPasses->setValue(params.med_passes);
+	ui.NoValuesScale->setChecked(params.no_auto_scale!=0);
+	ui.InterpAs4Colors->setChecked(params.four_color_rgb != 0);
+	ui.GreenMatch->setChecked(params.green_matching != 0);
 }
 
 int RawLab::getWbPreset(const QString& lastPreset) const
@@ -1721,6 +1724,9 @@ void RawLab::onProcess()
 
 			params.dcb_iterations = static_cast<int>(ui.sliderDcbIterations->getValue());
 			params.med_passes = static_cast<int>(ui.sliderMedFilterPasses->getValue());
+			params.no_auto_scale = ui.NoValuesScale->isChecked() ? 1 : 0;
+			params.four_color_rgb = ui.InterpAs4Colors->isChecked() ? 1 : 0;
+			params.green_matching = ui.GreenMatch->isChecked() ? 1 : 0;
 
 		}
 		SetProcess(false);
