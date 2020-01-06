@@ -3,6 +3,7 @@
 
 #define SIZEOFDWORD 4
 #define DECIMAL4 4
+#define DECIMAL3 3
 #define DECIMAL2 2
 #define DECIMAL0 0
 

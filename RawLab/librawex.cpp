@@ -7,6 +7,7 @@
 
 LibRawEx::LibRawEx()
 {
+	m_jpegQuality = 90;
 	m_defaultLibrawOutputParamsPtr = std::make_unique<libraw_output_params_t>(imgdata.params);
 	auto_mul[0] = auto_mul[1] = auto_mul[2] = 1.0f;
 	auto_mul[3] = .0f;
@@ -76,6 +77,59 @@ std::array<float, 4> LibRawEx::getAutoWB()
 
 	}
 	return autowb;
+}
+
+int LibRawEx::rawlab_jpeg_writer(const char* filename)
+{
+	int width, height, colors, bps;
+	int row_stride;
+	CHECK_ORDER_LOW(LIBRAW_PROGRESS_LOAD_RAW);
+
+	if (!imgdata.image)
+		return LIBRAW_OUT_OF_ORDER_CALL;
+
+	if (!filename)
+		return ENOENT;
+
+	get_mem_image_format(&width, &height, &colors, &bps);
+	bps = 8;
+	row_stride = width * colors;
+
+	unsigned char* imgBuff = new unsigned char[row_stride * static_cast<size_t>(height)];
+	std::swap(bps, imgdata.params.output_bps);
+	copy_mem_image(imgBuff, static_cast<int>(row_stride), 0);
+	std::swap(bps, imgdata.params.output_bps);
+
+	FILE* f = fopen(filename, "wb");
+	if (f)
+	{
+		struct jpeg_compress_struct cinfo;
+		struct jpeg_error_mgr jerr;
+		JSAMPROW row_pointer[1]; /* pointer to JSAMPLE row[s] */
+//		int row_stride;          /* physical row width in image buffer */
+
+		cinfo.err = jpeg_std_error(&jerr);
+		jpeg_create_compress(&cinfo);
+		jpeg_stdio_dest(&cinfo, f);
+		cinfo.image_width = width;      /* image width and height, in pixels */
+		cinfo.image_height = height;
+		cinfo.input_components = 3;           /* # of color components per pixel */
+		cinfo.in_color_space = JCS_RGB;       /* colorspace of input image */
+		jpeg_set_defaults(&cinfo);
+		jpeg_set_quality(&cinfo, m_jpegQuality, TRUE);
+		jpeg_start_compress(&cinfo, TRUE);
+//		row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+		JDIMENSION written = 0;
+		while (cinfo.next_scanline < cinfo.image_height) {
+			row_pointer[0] = &imgBuff[cinfo.next_scanline * row_stride];
+			/*(void)*/ written = jpeg_write_scanlines(&cinfo, row_pointer, 1);
+		}
+		jpeg_finish_compress(&cinfo);
+		fclose(f);
+		jpeg_destroy_compress(&cinfo);
+	}
+	delete[] imgBuff;
+	return 0;
 }
 
 #include "libraw/libraw_types.h"

@@ -87,8 +87,10 @@ public:
 
 	librawex_output_params_t exparams;
 	float auto_mul[4]; // рассчитывается в потоке (color.pre_mul при params.use_auto_wb=1)
+	int m_jpegQuality;
 
 	std::array<float, 4> getAutoWB();
+	int rawlab_jpeg_writer(const char* filename);
 
 	// demosaic pack
 	void set_pre_interpolate_cb(process_step_callback cb, bool def_cb = false);
