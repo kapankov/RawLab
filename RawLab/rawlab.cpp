@@ -318,6 +318,48 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderBlueCA->setDefaultValue(1.0);
 	ui.sliderBlueCA->setValue(1.0);
 
+	ui.sliderRedCART->setLabel(tr("Red:"));
+	ui.sliderRedCART->setGradient(QColor::fromRgb(0x33, 0, 0), QColor::fromRgb(0xCC, 0, 0));
+	ui.sliderRedCART->setRange(4.0, -4.0, DECIMAL2);
+	ui.sliderRedCART->setDefaultValue(.0);
+	ui.sliderRedCART->setValue(.0);
+
+	ui.sliderBlueCART->setLabel(tr("Blue:"));
+	ui.sliderBlueCART->setGradient(QColor::fromRgb(0, 0, 0x33), QColor::fromRgb(0, 0, 0xCC));
+	ui.sliderBlueCART->setRange(4.0, -4.0, DECIMAL3);
+	ui.sliderBlueCART->setDefaultValue(.0);
+	ui.sliderBlueCART->setValue(.0);
+
+	ui.sliderNoiseReduction->setLabel(tr("Noise reduction:"));
+	ui.sliderNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderNoiseReduction->setRange(3000, 0, DECIMAL0);
+	ui.sliderNoiseReduction->setDefaultValue(.0);
+	ui.sliderNoiseReduction->setValue(.0);
+
+	ui.sliderFBDDNoiseReduction->setLabel(tr("FBDD noise reduction:"));
+	ui.sliderFBDDNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderFBDDNoiseReduction->setRange(2, 0, DECIMAL0);
+	ui.sliderFBDDNoiseReduction->setDefaultValue(.0);
+	ui.sliderFBDDNoiseReduction->setValue(.0);
+
+	ui.sliderLineNoiseReduction->setLabel(tr("Line noise reduction:"));
+	ui.sliderLineNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderLineNoiseReduction->setRange(0.1, .0, DECIMAL3);
+	ui.sliderLineNoiseReduction->setDefaultValue(.0);
+	ui.sliderLineNoiseReduction->setValue(.0);
+
+	ui.sliderLumaNoiseReduction->setLabel(tr("Luma noise reduction:"));
+	ui.sliderLumaNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderLumaNoiseReduction->setRange(0.1, .0, DECIMAL3);
+	ui.sliderLumaNoiseReduction->setDefaultValue(.0);
+	ui.sliderLumaNoiseReduction->setValue(.0);
+
+	ui.sliderColorNoiseReduction->setLabel(tr("Color noise reduction:"));
+	ui.sliderColorNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderColorNoiseReduction->setRange(0.1, .0, DECIMAL3);
+	ui.sliderColorNoiseReduction->setDefaultValue(.0);
+	ui.sliderColorNoiseReduction->setValue(.0);
+
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));
 
@@ -508,12 +550,13 @@ void RawLab::ExtractProcessedRaw()
 	m_pRawBuff->m_bits = force8bit ? 8 : ibps;
 	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
 	m_pRawBuff->m_colors = colors;
-	libraw_output_params_t& lrParams = imgdata.params; // po
-	if (lrParams.output_color!=1)
+	libraw_output_params_t& lrParams = imgdata.params;
+	bool icc_conv = lrParams.output_profile && lrParams.camera_profile;
+	if (lrParams.output_color!=1 || icc_conv)
 	{
 		m_pRawBuff->m_params = std::make_unique<CmsParams>();
 		CmsParams* cmsParams = m_pRawBuff->m_params.get(); //po
-		if (lrParams.output_profile)
+		if (icc_conv)
 		{
 			cmsParams->m_iColorSpace = -1;
 			cmsParams->output_profile = lrParams.output_profile;
@@ -766,8 +809,25 @@ void RawLab::ApplyParams()
 	}
 	else params.dark_frame = nullptr;
 
+	m_lr->set_pre_interpolate_cb(NULL);
+
 	params.aber[0] = ui.sliderRedCA->getValue();
 	params.aber[1] = ui.sliderBlueCA->getValue();
+
+	exparams.cared = ui.sliderRedCART->getValue();
+	exparams.cablue = ui.sliderBlueCART->getValue();
+	exparams.ca_correc = (exparams.cared != 0.0f || exparams.cablue != 0.0f) ? 1 : 0;
+
+	params.threshold = ui.sliderNoiseReduction->getValue();
+	params.fbdd_noiserd = ui.sliderFBDDNoiseReduction->getValue();
+	exparams.linenoise = ui.sliderLineNoiseReduction->getValue();
+	exparams.cfaline = exparams.linenoise > 0 ? 1 : 0;
+
+	exparams.lclean = ui.sliderLumaNoiseReduction->getValue();
+	exparams.cclean = ui.sliderColorNoiseReduction->getValue();
+	exparams.cfa_clean = (exparams.lclean != 0.0f || exparams.cclean != 0.0f) ? 1 : 0;
+
+	if (exparams.ca_correc > 0 || exparams.cfaline > 0 || exparams.cfa_clean > 0) m_lr->set_pre_interpolate_cb(NULL, true);
 
 }
 
@@ -1090,6 +1150,13 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 
 	ui.sliderRedCA->setValue(params.aber[0]);
 	ui.sliderBlueCA->setValue(params.aber[1]);
+	ui.sliderRedCART->setValue(exparams.cared);
+	ui.sliderBlueCART->setValue(exparams.cablue);
+	ui.sliderNoiseReduction->setValue(params.threshold);
+	ui.sliderFBDDNoiseReduction->setValue(params.fbdd_noiserd);
+	ui.sliderLineNoiseReduction->setValue(exparams.cfaline > 0 ? exparams.linenoise : 0.0f);
+	ui.sliderLumaNoiseReduction->setValue(exparams.cfa_clean > 0 ? exparams.lclean : 0.0f);
+	ui.sliderColorNoiseReduction->setValue(exparams.cfa_clean > 0 ? exparams.cclean : 0.0f);
 
 }
 

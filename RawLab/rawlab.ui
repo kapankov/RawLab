@@ -131,9 +131,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-762</y>
+             <y>-1023</y>
              <width>331</width>
-             <height>1134</height>
+             <height>1395</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -1021,6 +1021,13 @@
              </layout>
             </item>
             <item>
+             <widget class="QCheckBox" name="FujiRotate_2">
+              <property name="text">
+               <string>Use Fuji rotate</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="Line" name="line_11">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -1069,6 +1076,153 @@
               </property>
               <property name="toolTip">
                <string>Enlarge the raw blue level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label1_2">
+              <property name="text">
+               <string>Auto chromatic aberrations supression (RT):</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderRedCART" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Enlarge the raw red level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlueCART" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Enlarge the raw blue level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_12">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Noise reduction through wavelet denoising</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderFBDDNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Controls FBDD noise reduction before demosaic</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderLineNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Line noise (banding) reduction. Useful range is 0.001 to 0.02</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderLumaNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Luminance noise reduction. Usable range from 0.005 to 0.05, common value 0.01</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderColorNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Color noise reduction. Usable range from 0.005 to 0.05, common value 0.01</string>
               </property>
              </widget>
             </item>
