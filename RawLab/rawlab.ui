@@ -131,9 +131,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-233</y>
+             <y>-1023</y>
              <width>331</width>
-             <height>605</height>
+             <height>1395</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -189,6 +189,9 @@
                   <width>0</width>
                   <height>0</height>
                  </size>
+                </property>
+                <property name="toolTip">
+                 <string>Select White Balance preset</string>
                 </property>
                </widget>
               </item>
@@ -417,6 +420,9 @@
                   <height>0</height>
                  </size>
                 </property>
+                <property name="toolTip">
+                 <string>Select highlight recovery mode</string>
+                </property>
                </widget>
               </item>
              </layout>
@@ -465,6 +471,9 @@
                   <width>0</width>
                   <height>0</height>
                  </size>
+                </property>
+                <property name="toolTip">
+                 <string>Select gamma curve</string>
                 </property>
                </widget>
               </item>
@@ -540,6 +549,9 @@
                   <height>0</height>
                  </size>
                 </property>
+                <property name="toolTip">
+                 <string>Select input (camera) profile, or colorspace</string>
+                </property>
                </widget>
               </item>
              </layout>
@@ -575,6 +587,9 @@
                   <width>0</width>
                   <height>0</height>
                  </size>
+                </property>
+                <property name="toolTip">
+                 <string>Select output profile, or colorspace</string>
                 </property>
                </widget>
               </item>
@@ -619,6 +634,9 @@
                   <height>0</height>
                  </size>
                 </property>
+                <property name="toolTip">
+                 <string>Select interpolation mode</string>
+                </property>
                </widget>
               </item>
              </layout>
@@ -658,6 +676,553 @@
               </property>
               <property name="toolTip">
                <string>Number of median filter passes</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="NoValuesScale">
+              <property name="text">
+               <string>Disable pixel values scaling</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="InterpAs4Colors">
+              <property name="text">
+               <string>Interpolate RGGB as 4 colors</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="GreenMatch">
+              <property name="text">
+               <string>Green Matching</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,2">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="lblFlip">
+                <property name="text">
+                 <string>Flip:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <property name="indent">
+                 <number>7</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="cmbFlip">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Image orientation</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="FujiRotate">
+              <property name="text">
+               <string>Use Fuji rotate</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,2">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="lblShot">
+                <property name="text">
+                 <string>Shot:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <property name="indent">
+                 <number>7</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="cmbShot">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Select shot</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="Line" name="line_9">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlack" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>User black level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlackRed" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Red channel black level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlackGreen" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Green channel black level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlackBlue" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Blue channel black level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlackGreen2" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Green2 channel black level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderMaximum" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Saturation adjustment</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderMaxThr" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>This parameter controls auto-adjusting of maximum value</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_10">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="1,2">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="lblBadPixMap">
+                <property name="text">
+                 <string>Bad pixels map:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <property name="indent">
+                 <number>7</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="cmbBadPixMap">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Bad pixels map in dcraw format</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="1,2">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="lblDarkFrame">
+                <property name="text">
+                 <string>Dark frame:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <property name="indent">
+                 <number>7</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="cmbDarkFrame">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Dark frame file in 16-bit PGM format</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="FujiRotate_2">
+              <property name="text">
+               <string>Use Fuji rotate</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_11">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label1">
+              <property name="text">
+               <string>Chromatic aberration (dcraw parameters):</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderRedCA" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Enlarge the raw red level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlueCA" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Enlarge the raw blue level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label1_2">
+              <property name="text">
+               <string>Auto chromatic aberrations supression (RT):</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderRedCART" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Enlarge the raw red level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderBlueCART" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Enlarge the raw blue level by the given given factor</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_12">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Noise reduction through wavelet denoising</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderFBDDNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Controls FBDD noise reduction before demosaic</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderLineNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Line noise (banding) reduction. Useful range is 0.001 to 0.02</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderLumaNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Luminance noise reduction. Usable range from 0.005 to 0.05, common value 0.01</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="SliderWidget" name="sliderColorNoiseReduction" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>500</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Color noise reduction. Usable range from 0.005 to 0.05, common value 0.01</string>
               </property>
              </widget>
             </item>
@@ -723,10 +1288,10 @@
           <attribute name="verticalHeaderVisible">
            <bool>false</bool>
           </attribute>
-          <attribute name="verticalHeaderDefaultSectionSize">
+          <attribute name="verticalHeaderMinimumSectionSize">
            <number>20</number>
           </attribute>
-          <attribute name="verticalHeaderMinimumSectionSize">
+          <attribute name="verticalHeaderDefaultSectionSize">
            <number>20</number>
           </attribute>
           <column/>

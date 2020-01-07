@@ -62,6 +62,14 @@ QString InterpolationModes[] = {
 	"VCD with EECI refine"
 };
 
+QString FlipModes[] = {
+	"From RAW",
+	"none",
+	"180",
+	"90CCW",
+	"90CW"
+};
+
 QString getInputProfilesDir()
 {
 	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/iprofiles";
@@ -70,6 +78,16 @@ QString getInputProfilesDir()
 QString getOutputProfilesDir()
 {
 	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/oprofiles";
+}
+
+QString getBadPixMapDir()
+{
+	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/badpixels";
+}
+
+QString getDarkFrameDir()
+{
+	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/darkframe";
 }
 
 RawLab::RawLab(QWidget *parent)
@@ -90,6 +108,11 @@ RawLab::RawLab(QWidget *parent)
 	m_settings.setDefaultValue(std::string("tiff"), std::string("true"));
 	m_settings.setDefaultValue(std::string("bps"), std::string("16"));
 	m_settings.setDefaultValue(std::string("cms"), std::string("1")); // CMS is On
+	m_settings.setDefaultValue(std::string("pnlpos"), std::string("left")); // main panel position
+
+	ui.action_Left->setChecked(true);
+	if (m_settings.getValue(std::string("pnlpos")).compare(std::string("right")) == 0)
+		onMainPanelRight();
 
 	bool  isCmsOn = m_settings.getValue(std::string("cms")).compare(std::string("1")) == 0;
 	UpdateCms(isCmsOn);
@@ -102,8 +125,6 @@ RawLab::RawLab(QWidget *parent)
 	m_MoveUp->setKey(Qt::CTRL + Qt::Key_Up);
 	m_MoveDown = new QShortcut(this);
 	m_MoveDown->setKey(Qt::CTRL + Qt::Key_Down);
-
-	ui.action_Left->setChecked(true);
 
 	m_plblState = new QLabel(this);
 	m_plblProgress = new QLabel(this);
@@ -223,6 +244,121 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderMedFilterPasses->setRange(10.0, 0.0, DECIMAL0);
 	ui.sliderMedFilterPasses->setDefaultValue(0);
 	ui.sliderMedFilterPasses->setValue(0);
+
+	for (auto item : FlipModes)
+		ui.cmbFlip->addItem(item);
+	ui.cmbFlip->setCurrentIndex(0);
+
+	ui.cmbShot->addItem("1");
+	ui.cmbShot->setCurrentIndex(0);
+
+	ui.sliderBlack->setLabel(tr("Black:"));
+	ui.sliderBlack->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderBlack->setRange(32767.0, 0.0, DECIMAL0);
+	ui.sliderBlack->setDefaultValue(0);
+	ui.sliderBlack->setValue(0);
+
+	ui.sliderBlackRed->setLabel(tr("Red black:"));
+	ui.sliderBlackRed->setGradient(QColor::fromRgb(0x33, 0, 0), QColor::fromRgb(0xCC, 0, 0));
+	ui.sliderBlackRed->setRange(32767.0, 0.0, DECIMAL0);
+	ui.sliderBlackRed->setDefaultValue(.0);
+	ui.sliderBlackRed->setValue(.0);
+
+	ui.sliderBlackGreen->setLabel(tr("Green black:"));
+	ui.sliderBlackGreen->setGradient(QColor::fromRgb(0, 0x33, 0), QColor::fromRgb(0, 0xCC, 0));
+	ui.sliderBlackGreen->setRange(32767.0, 0.0, DECIMAL0);
+	ui.sliderBlackGreen->setDefaultValue(.0);
+	ui.sliderBlackGreen->setValue(.0);
+
+	ui.sliderBlackBlue->setLabel(tr("Blue black:"));
+	ui.sliderBlackBlue->setGradient(QColor::fromRgb(0, 0, 0x33), QColor::fromRgb(0, 0, 0xCC));
+	ui.sliderBlackBlue->setRange(32767.0, 0.0, DECIMAL0);
+	ui.sliderBlackBlue->setDefaultValue(.0);
+	ui.sliderBlackBlue->setValue(.0);
+
+	ui.sliderBlackGreen2->setLabel(tr("Green2 black:"));
+	ui.sliderBlackGreen2->setGradient(QColor::fromRgb(0, 0x33, 0), QColor::fromRgb(0, 0xCC, 0));
+	ui.sliderBlackGreen2->setRange(32767.0, 0.0, DECIMAL0);
+	ui.sliderBlackGreen2->setDefaultValue(.0);
+	ui.sliderBlackGreen2->setValue(.0);
+
+	ui.sliderMaximum->setLabel(tr("Maximum:"));
+	ui.sliderMaximum->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderMaximum->setRange(32767.0, 0.0, DECIMAL0);
+	ui.sliderMaximum->setDefaultValue(0);
+	ui.sliderMaximum->setValue(0);
+
+	ui.sliderMaxThr->setLabel(tr("Max. threshold:"));
+	ui.sliderMaxThr->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderMaxThr->setRange(1.0, 0.0, DECIMAL2);
+	ui.sliderMaxThr->setDefaultValue(0.75);
+	ui.sliderMaxThr->setValue(0.75);
+
+	updateBadPixMaps();
+	m_badPixMapWatcher = std::make_unique<QFileSystemWatcher>();
+	m_badPixMapWatcher->addPath(getBadPixMapDir());
+
+	connect(m_badPixMapWatcher.get(), SIGNAL(directoryChanged(const QString&)), this, SLOT(onBadPixMapDirChanged(const QString&)));
+
+	updateDarkFrames();
+	m_darkFrameWatcher = std::make_unique<QFileSystemWatcher>();
+	m_darkFrameWatcher->addPath(getDarkFrameDir());
+
+	connect(m_darkFrameWatcher.get(), SIGNAL(directoryChanged(const QString&)), this, SLOT(onDarkFrameDirChanged(const QString&)));
+
+	ui.sliderRedCA->setLabel(tr("Red:"));
+	ui.sliderRedCA->setGradient(QColor::fromRgb(0x33, 0, 0), QColor::fromRgb(0xCC, 0, 0));
+	ui.sliderRedCA->setRange(1.1, 0.9, DECIMAL3);
+	ui.sliderRedCA->setDefaultValue(1.0);
+	ui.sliderRedCA->setValue(1.0);
+
+	ui.sliderBlueCA->setLabel(tr("Blue:"));
+	ui.sliderBlueCA->setGradient(QColor::fromRgb(0, 0, 0x33), QColor::fromRgb(0, 0, 0xCC));
+	ui.sliderBlueCA->setRange(1.1, 0.9, DECIMAL3);
+	ui.sliderBlueCA->setDefaultValue(1.0);
+	ui.sliderBlueCA->setValue(1.0);
+
+	ui.sliderRedCART->setLabel(tr("Red:"));
+	ui.sliderRedCART->setGradient(QColor::fromRgb(0x33, 0, 0), QColor::fromRgb(0xCC, 0, 0));
+	ui.sliderRedCART->setRange(4.0, -4.0, DECIMAL2);
+	ui.sliderRedCART->setDefaultValue(.0);
+	ui.sliderRedCART->setValue(.0);
+
+	ui.sliderBlueCART->setLabel(tr("Blue:"));
+	ui.sliderBlueCART->setGradient(QColor::fromRgb(0, 0, 0x33), QColor::fromRgb(0, 0, 0xCC));
+	ui.sliderBlueCART->setRange(4.0, -4.0, DECIMAL3);
+	ui.sliderBlueCART->setDefaultValue(.0);
+	ui.sliderBlueCART->setValue(.0);
+
+	ui.sliderNoiseReduction->setLabel(tr("Noise reduction:"));
+	ui.sliderNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderNoiseReduction->setRange(3000, 0, DECIMAL0);
+	ui.sliderNoiseReduction->setDefaultValue(.0);
+	ui.sliderNoiseReduction->setValue(.0);
+
+	ui.sliderFBDDNoiseReduction->setLabel(tr("FBDD noise reduction:"));
+	ui.sliderFBDDNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderFBDDNoiseReduction->setRange(2, 0, DECIMAL0);
+	ui.sliderFBDDNoiseReduction->setDefaultValue(.0);
+	ui.sliderFBDDNoiseReduction->setValue(.0);
+
+	ui.sliderLineNoiseReduction->setLabel(tr("Line noise reduction:"));
+	ui.sliderLineNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderLineNoiseReduction->setRange(0.1, .0, DECIMAL3);
+	ui.sliderLineNoiseReduction->setDefaultValue(.0);
+	ui.sliderLineNoiseReduction->setValue(.0);
+
+	ui.sliderLumaNoiseReduction->setLabel(tr("Luma noise reduction:"));
+	ui.sliderLumaNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderLumaNoiseReduction->setRange(0.1, .0, DECIMAL3);
+	ui.sliderLumaNoiseReduction->setDefaultValue(.0);
+	ui.sliderLumaNoiseReduction->setValue(.0);
+
+	ui.sliderColorNoiseReduction->setLabel(tr("Color noise reduction:"));
+	ui.sliderColorNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
+	ui.sliderColorNoiseReduction->setRange(0.1, .0, DECIMAL3);
+	ui.sliderColorNoiseReduction->setDefaultValue(.0);
+	ui.sliderColorNoiseReduction->setValue(.0);
 
 	ui.propertiesView->setRowCount(0);
 	addPropertiesSection(tr("Open RAW to view properties..."));
@@ -414,12 +550,13 @@ void RawLab::ExtractProcessedRaw()
 	m_pRawBuff->m_bits = force8bit ? 8 : ibps;
 	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
 	m_pRawBuff->m_colors = colors;
-	libraw_output_params_t& lrParams = imgdata.params; // po
-	if (lrParams.output_color!=1)
+	libraw_output_params_t& lrParams = imgdata.params;
+	bool icc_conv = lrParams.output_profile && lrParams.camera_profile;
+	if (lrParams.output_color!=1 || icc_conv)
 	{
 		m_pRawBuff->m_params = std::make_unique<CmsParams>();
 		CmsParams* cmsParams = m_pRawBuff->m_params.get(); //po
-		if (lrParams.output_profile)
+		if (icc_conv)
 		{
 			cmsParams->m_iColorSpace = -1;
 			cmsParams->output_profile = lrParams.output_profile;
@@ -432,6 +569,266 @@ void RawLab::ExtractProcessedRaw()
 				memcpy(cmsParams->cam_xyz, imgdata.color.cam_xyz, sizeof(imgdata.color.cam_xyz));
 		}
 	}
+}
+
+void RawLab::ApplyParams()
+{
+	libraw_output_params_t& params = m_lr->imgdata.params;
+	librawex_output_params_t& exparams = m_lr->exparams;
+	// tiff or ppm/pgm output format
+	params.output_tiff = m_settings.getValue(std::string("tiff")).compare(std::string("true")) == 0 ? 1 : 0;
+	// 16 or 8 bit support
+	params.output_bps = m_settings.getValue(std::string("bps")).compare(std::string("16")) == 0 ? 16 : 8;
+	// баланс белого
+	m_lastWBPreset = ui.cmbWhiteBalance->currentText();
+	float(&mul)[4] = params.user_mul;
+	mul[0] = 0.0;
+	mul[1] = 0.0;
+	mul[2] = 0.0;
+	mul[3] = 0.0;
+	params.use_auto_wb = 0;
+	params.use_camera_wb = 0;
+	if (m_lr->imgdata.progress_flags > 0)
+	{
+		switch (ui.cmbWhiteBalance->currentIndex())
+		{
+		case 1:	// AutoWB
+			params.use_auto_wb = 1;
+			params.use_camera_wb = 0;
+			break;
+		case 2:	// Daylight
+			params.use_auto_wb = 0;
+			params.use_camera_wb = 0;
+			break;
+		case 3:	// AsShot
+			params.use_auto_wb = 0;
+			params.use_camera_wb = 1;
+			break;
+		default: // Custom
+			params.use_auto_wb = 0;
+			params.use_camera_wb = 0;
+			mul[0] = ui.sliderWBRed->getValue();
+			mul[1] = ui.sliderWBGreen->getValue();
+			mul[2] = ui.sliderWBBlue->getValue();
+			mul[3] = ui.sliderWBGreen2->getValue();
+		}
+	}
+
+	// Exposure
+	params.exp_correc = 0;
+	params.exp_shift = 1.0f;
+	params.exp_preser = 0.0f;
+	if (fabs(ui.sliderExposure->getValue() - 1.0) > DBL_EPSILON)
+	{
+		params.exp_correc = 1;
+		params.exp_shift = static_cast<float>(std::pow(2, ui.sliderExposure->getValue()));
+	}
+	if (ui.sliderPreserveHighlights->getValue() > DBL_EPSILON)
+	{
+		params.exp_correc = 1;
+		params.exp_preser = static_cast<float>(ui.sliderPreserveHighlights->getValue());
+	}
+	// Brightness
+	if (ui.AutoBrightness->isChecked())
+	{
+		// Auto brigtness
+		params.no_auto_bright = 0;
+		params.bright = 1.0f;
+		params.auto_bright_thr = ui.sliderClippedPixels->getValue();
+	}
+	else
+	{
+		// Manual brightness
+		params.no_auto_bright = 1;
+		params.bright = ui.sliderBrightness->getValue();
+		params.auto_bright_thr = 0.0f;
+	}
+	// Highlights
+	params.highlight = ui.cmbHighlightMode->currentIndex();
+	// Gamma
+	double gamma = ui.sliderGamma->getValue();
+	double slope = ui.sliderSlope->getValue();
+	if (gamma < DBL_EPSILON) gamma = 1.0;
+	params.gamm[0] = 1.0 / gamma;
+	params.gamm[1] = slope;
+	params.gamm[2] = params.gamm[3] = params.gamm[4] = params.gamm[5] = 0;
+	// Input profile
+	params.camera_profile = nullptr;
+	switch (ui.cmbInputProfile->currentIndex())
+	{
+	case 0:
+		// 0: do not use embedded color profile
+		params.use_camera_matrix = 0;
+		break;
+	case 1:
+		// 1 (default): use embedded color profile (if present) for DNG files (always); 
+		// for other files only if use_camera_wb is set;
+		params.use_camera_matrix = 1;
+		break;
+	case 2:
+		// 3: use embedded color data (if present) regardless of white balance setting.
+		params.use_camera_matrix = 3;
+		break;
+	default:
+		// use input profile (camera_profile)
+		params.use_camera_matrix = 0;
+		m_inputProfile = (getInputProfilesDir() + "/" + ui.cmbInputProfile->currentText()).toStdString();
+		params.camera_profile = const_cast<char*>(m_inputProfile.c_str());
+		break;
+	}
+	// Output profile
+	params.output_color = ui.cmbOutProfile->currentIndex();
+	if (params.output_color > -1 && params.output_color < sizeof(outputProfiles) / sizeof(QString))
+		params.output_profile = nullptr;
+	else
+	{
+		params.output_color = 1;
+		m_outputProfile = (getOutputProfilesDir() + "/" + ui.cmbOutProfile->currentText()).toStdString();
+		params.output_profile = const_cast<char*>(m_outputProfile.c_str());
+	}
+	// interpolation
+	params.dcb_enhance_fl = 0; // используется только в режиме DCB with enhanced colors
+	exparams.eeci_refine = 0; // используется только в режиме VCD with EECI refine
+	auto setUserQual = [&params](int user_qual) // help lambda
+	{
+		params.no_interpolation = 0;
+		params.half_size = 0;
+		params.user_qual = user_qual;
+	};
+	auto setSpecialQual = [&params](int noInterpolation) // help lambda
+	{
+		params.no_interpolation = noInterpolation;
+		params.half_size = noInterpolation ? 0 : 1;
+		params.user_qual = -1;
+	};
+
+	const int iInterpolationMode = ui.cmbInterpolation->currentIndex();
+	switch (iInterpolationMode)
+	{
+	case 0: // no interpolation
+		setSpecialQual(1);
+		break;
+	case 1: // half-size
+		setSpecialQual(0);
+		break;
+	case 2: // linear interpolation
+	case 3: // VNG interpolation
+	case 4: // PPG interpolation
+	case 5: // AHD interpolation
+	case 6: // DCB interpolation
+	case 13: // DHT intepolation
+	case 14: // Modified AHD intepolation (by Anton Petrusevich)
+		setUserQual(iInterpolationMode - 2);
+		break;
+	case 7: // Modified AHD by Paul Lee (GPL2)
+	case 8: // AFD, 5-pass (GPL2)
+	case 9: // VCD (GPL2)
+	case 10: // Mixed VCD/Modified AHD (GPL2)
+	case 11: // LMMSE (GPL2)
+	case 12: // AMaZE (GPL3)
+		setUserQual(iInterpolationMode - 2);
+		m_lr->set_interpolate_bayer_cb(NULL, true);
+		break;
+	case 15: // DCB with enhanced colors
+		setUserQual(4); // DCB
+		params.dcb_enhance_fl = 1;
+		break;
+	case 16: // VCD with EECI refine
+		setUserQual(8); // Mixed VCD/Modified AHD interpolation
+		exparams.eeci_refine = 1;
+		m_lr->set_post_interpolate_cb(NULL, true);
+		break;
+	default:
+		setUserQual(-1); // default AHD*/
+	}
+
+	params.dcb_iterations = static_cast<int>(ui.sliderDcbIterations->getValue());
+	params.med_passes = static_cast<int>(ui.sliderMedFilterPasses->getValue());
+	params.no_auto_scale = ui.NoValuesScale->isChecked() ? 1 : 0;
+	params.four_color_rgb = ui.InterpAs4Colors->isChecked() ? 1 : 0;
+	params.green_matching = ui.GreenMatch->isChecked() ? 1 : 0;
+
+	switch (ui.cmbFlip->currentIndex())
+	{
+	case 1:
+		params.user_flip = 0; // none
+		break;
+	case 2:
+		params.user_flip = 3; // 180
+		break;
+	case 3:
+		params.user_flip = 5; // 90CCW
+		break;
+	case 4:
+		params.user_flip = 6; // 90CW
+		break;
+	default:
+		params.user_flip = -1; // from Raw
+		break;
+	}
+	params.use_fuji_rotate = ui.FujiRotate->isChecked() ? -1 : 0;
+	params.shot_select = ui.cmbShot->currentIndex();
+
+	if (double value = ui.sliderBlack->getValue())
+		params.user_black = static_cast<int>(value);
+	else
+		params.user_black = -1;
+	if (double value = ui.sliderBlackRed->getValue())
+		params.user_cblack[0] = static_cast<int>(value);
+	else
+		params.user_cblack[0] = -1;
+	if (double value = ui.sliderBlackGreen->getValue())
+		params.user_cblack[1] = static_cast<int>(value);
+	else
+		params.user_cblack[1] = -1;
+	if (double value = ui.sliderBlackBlue->getValue())
+		params.user_cblack[2] = static_cast<int>(value);
+	else
+		params.user_cblack[2] = -1;
+	if (double value = ui.sliderBlackGreen2->getValue())
+		params.user_cblack[3] = static_cast<int>(value);
+	else
+		params.user_cblack[3] = -1;
+	if (double value = ui.sliderMaximum->getValue())
+		params.user_sat = ui.sliderMaximum->getValue();
+	else
+		params.user_sat = -1;
+	params.adjust_maximum_thr = ui.sliderMaxThr->getValue();
+
+	if (ui.cmbBadPixMap->currentIndex() > 0)
+	{
+		m_badPixMap = (getOutputProfilesDir() + "/" + ui.cmbBadPixMap->currentText()).toStdString();
+		params.bad_pixels = const_cast<char*>(m_badPixMap.c_str());
+	}
+	else params.bad_pixels = nullptr;
+
+	if (ui.cmbDarkFrame->currentIndex() > 0)
+	{
+		m_darkFrame = (getOutputProfilesDir() + "/" + ui.cmbDarkFrame->currentText()).toStdString();
+		params.dark_frame = const_cast<char*>(m_darkFrame.c_str());
+	}
+	else params.dark_frame = nullptr;
+
+	m_lr->set_pre_interpolate_cb(NULL);
+
+	params.aber[0] = ui.sliderRedCA->getValue();
+	params.aber[1] = ui.sliderBlueCA->getValue();
+
+	exparams.cared = ui.sliderRedCART->getValue();
+	exparams.cablue = ui.sliderBlueCART->getValue();
+	exparams.ca_correc = (exparams.cared != 0.0f || exparams.cablue != 0.0f) ? 1 : 0;
+
+	params.threshold = ui.sliderNoiseReduction->getValue();
+	params.fbdd_noiserd = ui.sliderFBDDNoiseReduction->getValue();
+	exparams.linenoise = ui.sliderLineNoiseReduction->getValue();
+	exparams.cfaline = exparams.linenoise > 0 ? 1 : 0;
+
+	exparams.lclean = ui.sliderLumaNoiseReduction->getValue();
+	exparams.cclean = ui.sliderColorNoiseReduction->getValue();
+	exparams.cfa_clean = (exparams.lclean != 0.0f || exparams.cclean != 0.0f) ? 1 : 0;
+
+	if (exparams.ca_correc > 0 || exparams.cfaline > 0 || exparams.cfa_clean > 0) m_lr->set_pre_interpolate_cb(NULL, true);
+
 }
 
 void RawLab::UpdateCms(bool enable)
@@ -700,6 +1097,67 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 
 	ui.sliderDcbIterations->setValue(params.dcb_iterations);
 	ui.sliderMedFilterPasses->setValue(params.med_passes);
+	ui.NoValuesScale->setChecked(params.no_auto_scale!=0);
+	ui.InterpAs4Colors->setChecked(params.four_color_rgb != 0);
+	ui.GreenMatch->setChecked(params.green_matching != 0);
+
+	switch (params.user_flip)
+	{
+	case 0:
+		ui.cmbFlip->setCurrentIndex(1);
+		break;
+	case 3:
+		ui.cmbFlip->setCurrentIndex(2);
+		break;
+	case 5:
+		ui.cmbFlip->setCurrentIndex(3);
+		break;
+	case 6:
+		ui.cmbFlip->setCurrentIndex(4);
+		break;
+	default:
+		ui.cmbFlip->setCurrentIndex(0);
+		break;
+	}
+	ui.FujiRotate->setChecked(params.use_fuji_rotate != 0);
+
+	ui.cmbShot->clear();
+	for (int i=0;i<static_cast<int>(imgdata.idata.raw_count);++i)
+		ui.cmbShot->addItem(QString("%1").arg(i+1));
+	ui.cmbShot->setCurrentIndex(params.shot_select);
+	ui.cmbShot->setEnabled(imgdata.idata.raw_count > 1);
+
+	ui.sliderBlack->setValue(params.user_black > 0 ? params.user_black : 0);
+	ui.sliderBlackRed->setValue(params.user_cblack[0] > 0 ? params.user_cblack[0] : 0);
+	ui.sliderBlackGreen->setValue(params.user_cblack[1] > 0 ? params.user_cblack[1] : 0);
+	ui.sliderBlackBlue->setValue(params.user_cblack[2] > 0 ? params.user_cblack[2] : 0);
+	ui.sliderBlackGreen2->setValue(params.user_cblack[3] > 0 ? params.user_cblack[3] : 0);
+	ui.sliderMaximum->setValue(params.user_sat > 0 ? params.user_sat : 0);
+	ui.sliderMaxThr->setValue(params.adjust_maximum_thr > 0 ? params.adjust_maximum_thr : 0);
+
+	if (params.bad_pixels)
+	{
+		QFileInfo fi(QString(params.bad_pixels));
+		ui.cmbBadPixMap->setCurrentText(fi.fileName());
+	}
+	else ui.cmbBadPixMap->setCurrentIndex(0);
+	if (params.dark_frame)
+	{
+		QFileInfo fi(QString(params.dark_frame));
+		ui.cmbDarkFrame->setCurrentText(fi.fileName());
+	}
+	else ui.cmbDarkFrame->setCurrentIndex(0);
+
+	ui.sliderRedCA->setValue(params.aber[0]);
+	ui.sliderBlueCA->setValue(params.aber[1]);
+	ui.sliderRedCART->setValue(exparams.cared);
+	ui.sliderBlueCART->setValue(exparams.cablue);
+	ui.sliderNoiseReduction->setValue(params.threshold);
+	ui.sliderFBDDNoiseReduction->setValue(params.fbdd_noiserd);
+	ui.sliderLineNoiseReduction->setValue(exparams.cfaline > 0 ? exparams.linenoise : 0.0f);
+	ui.sliderLumaNoiseReduction->setValue(exparams.cfa_clean > 0 ? exparams.lclean : 0.0f);
+	ui.sliderColorNoiseReduction->setValue(exparams.cfa_clean > 0 ? exparams.cclean : 0.0f);
+
 }
 
 int RawLab::getWbPreset(const QString& lastPreset) const
@@ -800,6 +1258,58 @@ void RawLab::updateOutputProfiles()
 	default:
 		curIndex = curText.isEmpty() ? -1 : ui.cmbOutProfile->findText(curText);
 		ui.cmbOutProfile->setCurrentIndex(curIndex > -1 ? curIndex : 1);
+	}
+}
+
+void RawLab::updateBadPixMaps()
+{
+	int curIndex = ui.cmbBadPixMap->currentIndex();
+	QString curText = ui.cmbBadPixMap->currentText();
+	ui.cmbBadPixMap->clear();
+	ui.cmbBadPixMap->addItem("None");
+
+	QDirIterator it(getBadPixMapDir());
+	while (it.hasNext())
+	{
+		QFileInfo nextfile(it.next());
+		if (nextfile.isFile())
+			ui.cmbBadPixMap->addItem(nextfile.fileName());
+	}
+	switch (curIndex)
+	{
+	case -1:
+	case 0:
+		ui.cmbBadPixMap->setCurrentIndex(0);
+		break;
+	default:
+		curIndex = curText.isEmpty() ? -1 : ui.cmbBadPixMap->findText(curText);
+		ui.cmbBadPixMap->setCurrentIndex(curIndex > -1 ? curIndex : 1);
+	}
+}
+
+void RawLab::updateDarkFrames()
+{
+	int curIndex = ui.cmbDarkFrame->currentIndex();
+	QString curText = ui.cmbDarkFrame->currentText();
+	ui.cmbDarkFrame->clear();
+	ui.cmbDarkFrame->addItem("None");
+
+	QDirIterator it(getDarkFrameDir());
+	while (it.hasNext())
+	{
+		QFileInfo nextfile(it.next());
+		if (nextfile.isFile())
+			ui.cmbDarkFrame->addItem(nextfile.fileName());
+	}
+	switch (curIndex)
+	{
+	case -1:
+	case 0:
+		ui.cmbDarkFrame->setCurrentIndex(0);
+		break;
+	default:
+		curIndex = curText.isEmpty() ? -1 : ui.cmbDarkFrame->findText(curText);
+		ui.cmbDarkFrame->setCurrentIndex(curIndex > -1 ? curIndex : 1);
 	}
 }
 
@@ -1081,6 +1591,16 @@ void RawLab::onInputProfilesDirChanged(const QString& /*path*/)
 void RawLab::onOutputProfilesDirChanged(const QString& /*path*/)
 {
 	updateOutputProfiles();
+}
+
+void RawLab::onBadPixMapDirChanged(const QString& /*path*/)
+{
+	updateBadPixMaps();
+}
+
+void RawLab::onDarkFrameDirChanged(const QString& /*path*/)
+{
+	updateDarkFrames();
 }
 
 void RawLab::addPropertiesSection(const QString & name)
@@ -1453,13 +1973,20 @@ void RawLab::onSave()
 			tmpfilename = m_filename.replace(re, istiff ? QString("tiff") : QString("ppm"));
 		}
 		else tmpfilename = m_filename + (istiff ? QString(".tiff") : QString(".ppm"));
+		QString selectedFilter;
+		QString jpegFilter = tr("Jpeg files(*.jpeg * .jpg)");
 		QString fileName = QFileDialog::getSaveFileName(this,
 			tr("Save processed file..."),
 			tmpfilename,
-			istiff ? tr("Tiff files (*.tiff)") : tr("PPM/PGM files (*.ppm *.pgm)"));
+			istiff ? tr("Tiff files (*.tiff *.tif);;") + jpegFilter : tr("PPM/PGM files (*.ppm *.pgm)"),
+			&selectedFilter);
 		if (!fileName.isEmpty())
 		{
-			int result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			int result = LIBRAW_UNSPECIFIED_ERROR;
+			if (selectedFilter.compare(jpegFilter))
+				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			else
+				result = m_lr->rawlab_jpeg_writer(fileName.toStdString().c_str());
 			if (result != LIBRAW_SUCCESS)
 				QMessageBox::critical(this, tr("RawLab error"),
 					QString(m_lr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
@@ -1549,180 +2076,8 @@ void RawLab::onProcess()
 
 		m_lr->clearCancelFlag();
 		// взять параметры из UI
-		{
-			libraw_output_params_t &params = m_lr->imgdata.params;
-			librawex_output_params_t &exparams = m_lr->exparams;
-			// tiff or ppm/pgm output format
-			params.output_tiff = m_settings.getValue(std::string("tiff")).compare(std::string("true")) == 0 ? 1 : 0;
-			// 16 or 8 bit support
-			params.output_bps = m_settings.getValue(std::string("bps")).compare(std::string("16")) == 0 ? 16 : 8;
-			// баланс белого
-			m_lastWBPreset = ui.cmbWhiteBalance->currentText();
-			float(&mul)[4] = params.user_mul;
-			mul[0] = 0.0;
-			mul[1] = 0.0;
-			mul[2] = 0.0;
-			mul[3] = 0.0;
-			params.use_auto_wb = 0;
-			params.use_camera_wb = 0;
-			if (m_lr->imgdata.progress_flags > 0)
-			{
-				switch (ui.cmbWhiteBalance->currentIndex())
-				{
-				case 1:	// AutoWB
-					params.use_auto_wb = 1;
-					params.use_camera_wb = 0;
-					break;
-				case 2:	// Daylight
-					params.use_auto_wb = 0;
-					params.use_camera_wb = 0;
-					break;
-				case 3:	// AsShot
-					params.use_auto_wb = 0;
-					params.use_camera_wb = 1;
-					break;
-				default: // Custom
-					params.use_auto_wb = 0;
-					params.use_camera_wb = 0;
-					mul[0] = ui.sliderWBRed->getValue();
-					mul[1] = ui.sliderWBGreen->getValue();
-					mul[2] = ui.sliderWBBlue->getValue();
-					mul[3] = ui.sliderWBGreen2->getValue();
-				}
-			}
+		ApplyParams();
 
-			// Exposure
-			params.exp_correc = 0;
-			params.exp_shift = 1.0f;
-			params.exp_preser = 0.0f;
-			if (fabs(ui.sliderExposure->getValue() - 1.0) > DBL_EPSILON)
-			{
-				params.exp_correc = 1;
-				params.exp_shift = static_cast<float>(std::pow(2, ui.sliderExposure->getValue()));
-			}
-			if (ui.sliderPreserveHighlights->getValue() > DBL_EPSILON)
-			{
-				params.exp_correc = 1;
-				params.exp_preser = static_cast<float>(ui.sliderPreserveHighlights->getValue());
-			}
-			// Brightness
-			if (ui.AutoBrightness->isChecked())
-			{
-				// Auto brigtness
-				params.no_auto_bright = 0;
-				params.bright = 1.0f;
-				params.auto_bright_thr = ui.sliderClippedPixels->getValue();
-			}
-			else
-			{
-				// Manual brightness
-				params.no_auto_bright = 1;
-				params.bright = ui.sliderBrightness->getValue();
-				params.auto_bright_thr = 0.0f;
-			}
-			// Highlights
-			params.highlight = ui.cmbHighlightMode->currentIndex();
-			// Gamma
-			double gamma = ui.sliderGamma->getValue();
-			double slope = ui.sliderSlope->getValue();
-			if (gamma < DBL_EPSILON) gamma = 1.0;
-			params.gamm[0] = 1.0 / gamma;
-			params.gamm[1] = slope;
-			params.gamm[2] = params.gamm[3] = params.gamm[4] = params.gamm[5] = 0;
-			// Input profile
-			params.camera_profile = nullptr;
-			switch(ui.cmbInputProfile->currentIndex())
-			{
-			case 0:
-				// 0: do not use embedded color profile
-				params.use_camera_matrix = 0;
-				break;
-			case 1:
-				// 1 (default): use embedded color profile (if present) for DNG files (always); 
-				// for other files only if use_camera_wb is set;
-				params.use_camera_matrix = 1;
-				break;
-			case 2:
-				// 3: use embedded color data (if present) regardless of white balance setting.
-				params.use_camera_matrix = 3;
-				break;
-			default:
-				// use input profile (camera_profile)
-				params.use_camera_matrix = 0;
-				m_inputProfile = (getInputProfilesDir() + "/" + ui.cmbInputProfile->currentText()).toStdString();
-				params.camera_profile = const_cast<char*>(m_inputProfile.c_str());
-				break;
-			}
-			// Output profile
-			params.output_color = ui.cmbOutProfile->currentIndex();
-			if (params.output_color > -1 && params.output_color < sizeof(outputProfiles) / sizeof(QString))
-				params.output_profile = nullptr;
-			else
-			{
-				params.output_color = 1;
-				m_outputProfile = (getOutputProfilesDir() + "/" + ui.cmbOutProfile->currentText()).toStdString();
-				params.output_profile = const_cast<char*>(m_outputProfile.c_str());
-			}
-			// interpolation
-			params.dcb_enhance_fl = 0; // используется только в режиме DCB with enhanced colors
-			exparams.eeci_refine = 0; // используется только в режиме VCD with EECI refine
-			auto setUserQual = [&params](int user_qual) // help lambda
-			{
-				params.no_interpolation = 0;
-				params.half_size = 0;
-				params.user_qual = user_qual;
-			};
-			auto setSpecialQual = [&params](int noInterpolation) // help lambda
-			{
-				params.no_interpolation = noInterpolation;
-				params.half_size = noInterpolation? 0 : 1;
-				params.user_qual = -1;
-			};
-
-			const int iInterpolationMode = ui.cmbInterpolation->currentIndex();
-			switch (iInterpolationMode)
-			{
-			case 0: // no interpolation
-				setSpecialQual(1);
-				break;
-			case 1: // half-size
-				setSpecialQual(0);
-				break;
-			case 2: // linear interpolation
-			case 3: // VNG interpolation
-			case 4: // PPG interpolation
-			case 5: // AHD interpolation
-			case 6: // DCB interpolation
-			case 13: // DHT intepolation
-			case 14: // Modified AHD intepolation (by Anton Petrusevich)
-				setUserQual(iInterpolationMode-2);
-				break;
-			case 7: // Modified AHD by Paul Lee (GPL2)
-			case 8: // AFD, 5-pass (GPL2)
-			case 9: // VCD (GPL2)
-			case 10: // Mixed VCD/Modified AHD (GPL2)
-			case 11: // LMMSE (GPL2)
-			case 12: // AMaZE (GPL3)
-				setUserQual(iInterpolationMode - 2);
-				m_lr->set_interpolate_bayer_cb(NULL, true);
-				break;
-			case 15: // DCB with enhanced colors
-				setUserQual(4); // DCB
-				params.dcb_enhance_fl = 1;
-				break;
-			case 16: // VCD with EECI refine
-				setUserQual(8); // Mixed VCD/Modified AHD interpolation
-				exparams.eeci_refine = 1;
-				m_lr->set_post_interpolate_cb(NULL, true);
-				break;
-			default:
-				setUserQual(-1); // default AHD*/
-			}
-
-			params.dcb_iterations = static_cast<int>(ui.sliderDcbIterations->getValue());
-			params.med_passes = static_cast<int>(ui.sliderMedFilterPasses->getValue());
-
-		}
 		SetProcess(false);
 		CProcessThread* process = new CProcessThread(m_lr.get(), m_filename);
 		// Передаем классу QThread права владения классом потока
@@ -1788,7 +2143,16 @@ void RawLab::onSettings()
 void RawLab::onAbout()
 {
 	QMessageBox::about(this, APPNAME,
-		QString(APPNAME " ver. %1.%2.%3 build %4\n"
+		QString(APPNAME " ver. %1.%2.%3 build %4"
+#ifdef _WIN64
+			", x64\n"
+#else
+	#ifdef _WIN32
+				", x86\n"
+	#else
+				"\n"
+	#endif
+#endif
 		"Copyright(C) " LEGALCOPYRIGHT "\n"
 		PRODUCTSUPPORT "\n"
 		"\n"
@@ -1848,6 +2212,7 @@ void RawLab::onMainPanelLeft()
 		layout->removeWidget(ui.tabWidget);
 		layout->insertWidget(0, ui.tabWidget);
 		ui.action_Right->setChecked(false);
+		m_settings.setValue(std::string("pnlpos"), std::string("left"));
 	}
 	ui.action_Left->setChecked(true);
 }
@@ -1860,6 +2225,7 @@ void RawLab::onMainPanelRight()
 		layout->removeWidget(ui.tabWidget);
 		layout->insertWidget(1, ui.tabWidget);
 		ui.action_Left->setChecked(false);
+		m_settings.setValue(std::string("pnlpos"), std::string("right"));
 	}
 	ui.action_Right->setChecked(true);
 }

@@ -251,7 +251,7 @@ bool TransformColor(void* buff, const size_t width, const size_t height, const i
 
 	cmsUInt32Number inputFormat = (bps > 8 ? TYPE_RGB_16 : TYPE_RGB_8);
 	cmsUInt32Number outputFormat = (bps > 8 ? TYPE_RGB_16 : TYPE_RGB_8);
-	if (cmsHTRANSFORM hTransform = cmsCreateTransform(hInProfile, inputFormat, hOutProfile, outputFormat, INTENT_PERCEPTUAL/*INTENT_RELATIVE_COLORIMETRIC*/, cmsFLAGS_NOCACHE | cmsFLAGS_BLACKPOINTCOMPENSATION))
+	if (cmsHTRANSFORM hTransform = cmsCreateTransform(hInProfile, inputFormat, hOutProfile, outputFormat, /*INTENT_PERCEPTUAL*/ INTENT_RELATIVE_COLORIMETRIC, cmsFLAGS_NOCACHE | cmsFLAGS_BLACKPOINTCOMPENSATION))
 	{
 		for (size_t n = 0; n < height; ++n)
 			cmsDoTransform(hTransform, &static_cast<unsigned char*>(buff)[stride * n], &static_cast<unsigned char*>(buff)[stride * n], static_cast<cmsUInt32Number>(width));

@@ -66,8 +66,17 @@ private:
 	// отслеживает изменения в каталоге с выходными профилями
 	// и обновляет комбобокс Output Profiles
 	std::unique_ptr<QFileSystemWatcher> m_outputProfilesWatcher;
+	// отслеживает изменения в каталоге с картами битых пикселей
+	// и обновляет комбобокс Bad pixels map
+	std::unique_ptr<QFileSystemWatcher> m_badPixMapWatcher;
+	// отслеживает изменения в каталоге с картами битых пикселей
+	// и обновляет комбобокс Bad pixels map
+	std::unique_ptr<QFileSystemWatcher> m_darkFrameWatcher;
+
 	std::string m_inputProfile;
 	std::string m_outputProfile;
+	std::string m_badPixMap;
+	std::string m_darkFrame;
 
 	QShortcut* m_NextLeftPanelShortcut;
 
@@ -81,6 +90,9 @@ private:
 	bool ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr);
 	// Получение обработанного изображения из LibRaw в m_pRawBuff
 	void ExtractProcessedRaw();
+	// установить параметры в m_lr из UI
+	void ApplyParams();
+	// обновить в UI информацию вкл/выкл CMS
 	void UpdateCms(bool enable);
 
 	void SetProcess(bool default);
@@ -95,6 +107,8 @@ private:
 	void updateGreen2Div();
 	void updateInputProfiles();
 	void updateOutputProfiles();
+	void updateBadPixMaps();
+	void updateDarkFrames();
 	// check parameters before raw process
 	bool checkBeforeProcess();
 signals:
@@ -140,5 +154,7 @@ public slots:
 	void onSlopeValueChanged(double value);
 	void onInputProfilesDirChanged(const QString &path);
 	void onOutputProfilesDirChanged(const QString &path);
+	void onBadPixMapDirChanged(const QString & path);
+	void onDarkFrameDirChanged(const QString & path);
 
 };
