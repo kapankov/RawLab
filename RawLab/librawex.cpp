@@ -7,6 +7,7 @@
 
 LibRawEx::LibRawEx()
 {
+	m_jpegQuality = 90;
 	m_defaultLibrawOutputParamsPtr = std::make_unique<libraw_output_params_t>(imgdata.params);
 	auto_mul[0] = auto_mul[1] = auto_mul[2] = 1.0f;
 	auto_mul[3] = .0f;
@@ -76,6 +77,77 @@ std::array<float, 4> LibRawEx::getAutoWB()
 
 	}
 	return autowb;
+}
+
+int LibRawEx::rawlab_jpeg_writer(const char* filename)
+{
+	int ret = 0;
+	int width, height, colors, bps;
+	size_t row_stride;
+	CHECK_ORDER_LOW(LIBRAW_PROGRESS_LOAD_RAW);
+
+	if (!imgdata.image)
+		return LIBRAW_OUT_OF_ORDER_CALL;
+
+	if (!filename)
+		return ENOENT;
+
+	get_mem_image_format(&width, &height, &colors, &bps);
+	bps = 8;
+	row_stride = width * colors;
+
+	unsigned char* imgBuff = new unsigned char[row_stride * static_cast<size_t>(height)];
+	std::swap(bps, imgdata.params.output_bps);
+	ret = copy_mem_image(imgBuff, static_cast<int>(row_stride), 0);
+	std::swap(bps, imgdata.params.output_bps);
+	
+	if (!ret)
+	{
+		FILE* f;
+		if (fopen_s(&f, filename, "wb") == 0)
+		{
+			struct jpeg_compress_struct cinfo;
+			struct jpeg_error_mgr jerr;
+			JSAMPROW row_pointer[1]; /* pointer to JSAMPLE row[s] */
+
+			cinfo.err = jpeg_std_error(&jerr);
+			jpeg_create_compress(&cinfo);
+			jpeg_stdio_dest(&cinfo, f);
+			cinfo.image_width = width;      /* image width and height, in pixels */
+			cinfo.image_height = height;
+			cinfo.input_components = 3;           /* # of color components per pixel */
+			cinfo.in_color_space = JCS_RGB;       /* colorspace of input image */
+			jpeg_set_defaults(&cinfo);
+			jpeg_set_quality(&cinfo, m_jpegQuality, TRUE);
+			jpeg_start_compress(&cinfo, TRUE);
+			/* add icc-profile */
+			if (imgdata.params.output_profile && imgdata.params.camera_profile)
+			{
+				FILE* iccprofile;
+				if (fopen_s(&iccprofile, imgdata.params.output_profile, "rb") == 0)
+				{
+					fseek(iccprofile, 0, SEEK_END);
+					int size = ftell(iccprofile);
+					fseek(iccprofile, 0, SEEK_SET);
+					unsigned char* icc_data_ptr = new unsigned char[size];
+					if (fread(icc_data_ptr, 1, size, iccprofile) == size)
+						jpeg_write_icc_profile(&cinfo, icc_data_ptr, size);
+					delete[] icc_data_ptr;
+					fclose(iccprofile);
+				}
+			}
+			while (cinfo.next_scanline < cinfo.image_height) {
+				row_pointer[0] = &imgBuff[cinfo.next_scanline * row_stride];
+				(void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
+			}
+			jpeg_finish_compress(&cinfo);
+			fclose(f);
+			jpeg_destroy_compress(&cinfo);
+		}
+		else ret = -1;
+	}
+	delete[] imgBuff;
+	return ret;
 }
 
 #include "libraw/libraw_types.h"
