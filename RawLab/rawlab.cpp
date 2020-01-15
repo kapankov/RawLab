@@ -326,7 +326,7 @@ RawLab::RawLab(QWidget *parent)
 
 	ui.sliderBlueCART->setLabel(tr("Blue:"));
 	ui.sliderBlueCART->setGradient(QColor::fromRgb(0, 0, 0x33), QColor::fromRgb(0, 0, 0xCC));
-	ui.sliderBlueCART->setRange(4.0, -4.0, DECIMAL3);
+	ui.sliderBlueCART->setRange(4.0, -4.0, DECIMAL2);
 	ui.sliderBlueCART->setDefaultValue(.0);
 	ui.sliderBlueCART->setValue(.0);
 
@@ -552,7 +552,7 @@ void RawLab::ExtractProcessedRaw()
 	m_pRawBuff->m_colors = colors;
 	libraw_output_params_t& lrParams = imgdata.params;
 	bool icc_conv = lrParams.output_profile && lrParams.camera_profile;
-	if (lrParams.output_color!=1 || icc_conv)
+//	if (lrParams.output_color!=1 || icc_conv)
 	{
 		m_pRawBuff->m_params = std::make_unique<CmsParams>();
 		CmsParams* cmsParams = m_pRawBuff->m_params.get(); //po
@@ -774,21 +774,21 @@ void RawLab::ApplyParams()
 	else
 		params.user_black = -1;
 	if (double value = ui.sliderBlackRed->getValue())
-		params.user_cblack[0] = static_cast<int>(value);
+		params.user_cblack[0] = static_cast<int>(value) - 1000001;
 	else
-		params.user_cblack[0] = -1;
+		params.user_cblack[0] = -1000001;
 	if (double value = ui.sliderBlackGreen->getValue())
-		params.user_cblack[1] = static_cast<int>(value);
+		params.user_cblack[1] = static_cast<int>(value) - 1000001;
 	else
-		params.user_cblack[1] = -1;
+		params.user_cblack[1] = -1000001;
 	if (double value = ui.sliderBlackBlue->getValue())
-		params.user_cblack[2] = static_cast<int>(value);
+		params.user_cblack[2] = static_cast<int>(value) - 1000001;
 	else
-		params.user_cblack[2] = -1;
+		params.user_cblack[2] = -1000001;
 	if (double value = ui.sliderBlackGreen2->getValue())
-		params.user_cblack[3] = static_cast<int>(value);
+		params.user_cblack[3] = static_cast<int>(value) - 1000001;
 	else
-		params.user_cblack[3] = -1;
+		params.user_cblack[3] = -1000001;
 	if (double value = ui.sliderMaximum->getValue())
 		params.user_sat = ui.sliderMaximum->getValue();
 	else
@@ -1128,10 +1128,10 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 	ui.cmbShot->setEnabled(imgdata.idata.raw_count > 1);
 
 	ui.sliderBlack->setValue(params.user_black > 0 ? params.user_black : 0);
-	ui.sliderBlackRed->setValue(params.user_cblack[0] > 0 ? params.user_cblack[0] : 0);
-	ui.sliderBlackGreen->setValue(params.user_cblack[1] > 0 ? params.user_cblack[1] : 0);
-	ui.sliderBlackBlue->setValue(params.user_cblack[2] > 0 ? params.user_cblack[2] : 0);
-	ui.sliderBlackGreen2->setValue(params.user_cblack[3] > 0 ? params.user_cblack[3] : 0);
+	ui.sliderBlackRed->setValue(params.user_cblack[0] > -1000001 ? params.user_cblack[0] + 1000001 : 0);
+	ui.sliderBlackGreen->setValue(params.user_cblack[1] > -1000001 ? params.user_cblack[1] + 1000001 : 0);
+	ui.sliderBlackBlue->setValue(params.user_cblack[2] > -1000001 ? params.user_cblack[2] + 1000001 : 0);
+	ui.sliderBlackGreen2->setValue(params.user_cblack[3] > -1000001 ? params.user_cblack[3] + 1000001 : 0);
 	ui.sliderMaximum->setValue(params.user_sat > 0 ? params.user_sat : 0);
 	ui.sliderMaxThr->setValue(params.adjust_maximum_thr > 0 ? params.adjust_maximum_thr : 0);
 
@@ -1965,14 +1965,14 @@ void RawLab::onSave()
 	bool istiff = m_lr->imgdata.params.output_tiff == 1;
 	if (m_lr->imgdata.progress_flags & LIBRAW_PROGRESS_CONVERT_RGB)
 	{
-		QString tmpfilename;
+		QString tmpfilename(m_filename);
 		QString ext = QFileInfo(m_filename).suffix();
 		if (!ext.isEmpty())
 		{
 			QRegularExpression re(ext + "$");
-			tmpfilename = m_filename.replace(re, istiff ? QString("tiff") : QString("ppm"));
+			tmpfilename.replace(re, istiff ? QString("tiff") : QString("ppm"));
 		}
-		else tmpfilename = m_filename + (istiff ? QString(".tiff") : QString(".ppm"));
+		else tmpfilename += istiff ? QString(".tiff") : QString(".ppm");
 		QString selectedFilter;
 		QString jpegFilter = tr("Jpeg files(*.jpeg * .jpg)");
 		QString fileName = QFileDialog::getSaveFileName(this,

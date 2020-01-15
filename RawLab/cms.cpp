@@ -4,32 +4,22 @@
 #include "stdafx.h"
 
 #define isequal(x,y,p) (abs((x)-(y))<(p))
-constexpr cmsInt32Number iccType = 4;
+constexpr cmsInt32Number iccType = 2;
+// from http://brucelindbloom.com/index.html?WorkingSpaceInfo.html
+constexpr cmsCIExyYTRIPLE adobe_primaries = {
+{0.6400, 0.3300, 1.0},
+{0.2100, 0.7100, 1.0},
+{0.1500, 0.0600, 1.0}
+};
 
 cmsHPROFILE cmsCreateAdobeRGBProfile()
 {
-	// icc memory profile
-	DWORD adobergb_profile[142] = {
-		0x38020000, 0x00000000, 0x00004002, 0x72746E6D, 0x20424752, 0x205A5958, 0x0C00E307, 0x09000500,
-		0x06000300, 0x70736361, 0x5446534D, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x00000000, 0xD6F60000, 0x00000000, 0x2DD30000, 0x624C7752, 0x00000000, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x0C000000, 0x63736564, 0x14010000, 0x67000000, 0x74727063, 0x7C010000, 0x0F000000, 0x74707477,
-		0x8C010000, 0x14000000, 0x6D726863, 0xA0010000, 0x24000000, 0x5A595872, 0xC4010000, 0x14000000,
-		0x43525472, 0xD8010000, 0x10000000, 0x43525467, 0xD8010000, 0x10000000, 0x43525462, 0xD8010000,
-		0x10000000, 0x5A595867, 0xE8010000, 0x14000000, 0x5A595862, 0xFC010000, 0x14000000, 0x696D756C,
-		0x10020000, 0x14000000, 0x74706B62, 0x24020000, 0x14000000, 0x63736564, 0x00000000, 0x0D000000,
-		0x626F6441, 0x42475265, 0x38393931, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x74786574,
-		0x00000000, 0x4C776152, 0x00006261, 0x205A5958, 0x00000000, 0x54F30000, 0x00000100, 0xCF160100,
-		0x6D726863, 0x00000000, 0x00000300, 0xD7A30000, 0x7E540000, 0xC6350000, 0xBEB50000, 0x65260000,
-		0x5C0F0000, 0x205A5958, 0x00000000, 0x199C0000, 0xA84F0000, 0xFA040000, 0x76727563, 0x00000000,
-		0x01000000, 0x00003302, 0x205A5958, 0x00000000, 0x8E340000, 0x29A00000, 0x960F0000, 0x205A5958,
-		0x00000000, 0x2F260000, 0x2F100000, 0x9DBE0000, 0x205A5958, 0x00000000, 0x5C0F7200, 0x00007800,
-		0x27B18200, 0x205A5958, 0x00000000, 0x00000000, 0x00000000, 0x00000000
-	};
-	return cmsOpenProfileFromMem(adobergb_profile, sizeof(adobergb_profile));
+	cmsToneCurve* curve[3];
+	cmsCIExyY whitepoint = { 0.3127, 0.3290, 1.0 };
+	curve[0] = curve[1] = curve[2] = cmsBuildGamma(NULL, 2.19921875);
+	cmsHPROFILE hProfile = cmsCreateRGBProfile(&whitepoint, &adobe_primaries, curve);
+	cmsFreeToneCurve(curve[0]);
+	return hProfile;
 }
 
 cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyYTRIPLE* pprimaries, cmsCIExyY* pwhitepoint)
@@ -37,42 +27,38 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 	cmsHPROFILE hProfile = 0;
 	if (iColorSpace >= 0 && iColorSpace < 7)
 	{
+		// from http://brucelindbloom.com/index.html?WorkingSpaceInfo.html
 		cmsCIExyYTRIPLE srgb_primaries = {
-			{0.648436, 0.330852, 1.0},
-			{0.321157, 0.597872, 1.0},
-			{0.155882, 0.066047, 1.0}
+			{0.6400, 0.3300, 1.0},
+			{0.3000, 0.6000, 1.0},
+			{0.1500, 0.0600, 1.0}
 		};
-		cmsCIExyYTRIPLE adobe_primaries = {
-			{0.648423, 0.330850, 1.0},
-			{0.230150, 0.701562, 1.0},
-			{0.155889, 0.066054, 1.0}
-		};
+
 		cmsCIExyYTRIPLE wide_primaries = {
-			{0.734998, 0.265002, 1.0},
-			{0.114980, 0.826009, 1.0},
-			{0.157009, 0.017988, 1.0}
+			{0.7350, 0.2650, 1.0},
+			{0.1150, 0.8260, 1.0},
+			{0.1570, 0.0180, 1.0}
 		};
 		cmsCIExyYTRIPLE prophoto_primaries = {
-			{0.734696, 0.265304, 1.0},
-			{0.159584, 0.840381, 1.0},
-			{0.036560, 0.000070, 1.0}
+			{0.7347, 0.2653, 1.0},
+			{0.1596, 0.8404, 1.0},
+			{0.0366, 0.0001, 1.0}
 		};
 		cmsCIExyYTRIPLE aces_primaries = {
-			{0.733648, 0.268992, 1.0},
-			{0.022273, 0.963092, 1.0},
-			{-0.084498, -0.143705, 1.0}
+			{0.7347, 0.2653, 1.0},
+			{0.00001, 1.0, 1.0},
+			{0.0001, -0.077, 1.0}
 		};
 		cmsCIExyYTRIPLE xyz_primaries = {
-			{0.980958, 0.027673, 1.0},
-			{0.022267, 0.963099, 1.0},
-			{-0.073197, -0.024881, 1.0}
+			{1.0, .0, 1.0},
+			{.0, 1.0, 1.0},
+			{.0, .0, 1.0}
 		};
 
 		cmsCIExyY whitepoint;
 		// точки белого для разных спецификаций
-		cmsCIExyY d65_srgb_adobe_specs = { 0.3127, 0.3290, 1.0 };
-		cmsCIExyY d50_romm_spec = { 0.3457, 0.3585, 1.0 };
-		cmsCIExyY d60_aces = { 0.32168, 0.33767, 1.0 };
+		cmsCIExyY d65_wp = { 0.3127, 0.3290, 1.0 };
+//		cmsCIExyY d60_aces = { 0.32168, 0.33767, 1.0 };
 
 		cmsToneCurve* curve[3];
 		const cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055,  0.055 / 1.055, 1.0 / 12.92, 0.04045 };
@@ -86,29 +72,28 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 			hProfile = cmsCreateRGBProfile(pwhitepoint, pprimaries, curve);
 			break;
 		case 1: // sRGB
-//			hProfile = cmsCreate_sRGBProfile();
-			whitepoint = d65_srgb_adobe_specs;
+			whitepoint = d65_wp;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildParametricToneCurve(NULL, iccType, srgb_parameters);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &srgb_primaries, curve);
 			break;
 		case 2: // AdobeRGB
-			whitepoint = d65_srgb_adobe_specs;
+			whitepoint = d65_wp;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildGamma(NULL, 2.19921875);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &adobe_primaries, curve);
 			break;
 		case 3: // WideRGB
-			whitepoint = d50_romm_spec;
+			whitepoint = d65_wp; //d50_romm_wp;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildGamma(NULL, 2.19921875);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &wide_primaries, curve);
 			break;
 		case 4: // ProPhoto
-			whitepoint = d50_romm_spec;
+			whitepoint = d65_wp; // d50_romm_wp;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildGamma(NULL, 1.80078125);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &prophoto_primaries, curve);
 			break;
 		case 5: // XYZ 65
 			//hProfile = cmsCreateXYZProfile();
-			whitepoint = d65_srgb_adobe_specs;
+			whitepoint = d65_wp;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildGamma(NULL, 1.00);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &xyz_primaries, curve);
 /*
@@ -119,13 +104,20 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 
 			break;
 		case 6: // ACES
-			whitepoint = d60_aces;
+			whitepoint = d65_wp; // d60_aces;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildGamma(NULL, 1.00);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &aces_primaries, curve);
 			break;
 		}
 		if (!tonecurve) cmsFreeToneCurve(curve[0]);
 	}
+/*	if (hProfile)
+	{
+//		cmsHPROFILE p = cmsCreate_sRGBProfile();
+		cmsSetProfileVersion(hProfile, 2.1);
+		cmsSaveProfileToFile(hProfile, "e:\\raws\\samples\\debug.icc ");
+//		cmsCloseProfile(p);
+	}*/
 	return hProfile;
 }
 
@@ -251,7 +243,7 @@ bool TransformColor(void* buff, const size_t width, const size_t height, const i
 
 	cmsUInt32Number inputFormat = (bps > 8 ? TYPE_RGB_16 : TYPE_RGB_8);
 	cmsUInt32Number outputFormat = (bps > 8 ? TYPE_RGB_16 : TYPE_RGB_8);
-	if (cmsHTRANSFORM hTransform = cmsCreateTransform(hInProfile, inputFormat, hOutProfile, outputFormat, /*INTENT_PERCEPTUAL*/ INTENT_RELATIVE_COLORIMETRIC, cmsFLAGS_NOCACHE | cmsFLAGS_BLACKPOINTCOMPENSATION))
+	if (cmsHTRANSFORM hTransform = cmsCreateTransform(hInProfile, inputFormat, hOutProfile, outputFormat, INTENT_PERCEPTUAL /*INTENT_RELATIVE_COLORIMETRIC*/, cmsFLAGS_NOCACHE | cmsFLAGS_BLACKPOINTCOMPENSATION))
 	{
 		for (size_t n = 0; n < height; ++n)
 			cmsDoTransform(hTransform, &static_cast<unsigned char*>(buff)[stride * n], &static_cast<unsigned char*>(buff)[stride * n], static_cast<cmsUInt32Number>(width));

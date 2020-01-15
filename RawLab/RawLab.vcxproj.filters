@@ -120,6 +120,9 @@
     <ClCompile Include="settingsdlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="nowheel_combobox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -184,6 +187,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="settingsdlg.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="nowheel_combobox.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

@@ -131,9 +131,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-1023</y>
+             <y>0</y>
              <width>331</width>
-             <height>1395</height>
+             <height>1372</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -183,7 +183,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbWhiteBalance">
+               <widget class="NoWheelComboBox" name="cmbWhiteBalance">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -413,7 +413,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbHighlightMode">
+               <widget class="NoWheelComboBox" name="cmbHighlightMode">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -465,7 +465,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbGammaCurve">
+               <widget class="NoWheelComboBox" name="cmbGammaCurve">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -542,7 +542,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbInputProfile">
+               <widget class="NoWheelComboBox" name="cmbInputProfile">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -581,7 +581,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbOutProfile">
+               <widget class="NoWheelComboBox" name="cmbOutProfile">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -627,7 +627,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbInterpolation">
+               <widget class="NoWheelComboBox" name="cmbInterpolation">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -732,7 +732,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbFlip">
+               <widget class="NoWheelComboBox" name="cmbFlip">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -778,7 +778,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbShot">
+               <widget class="NoWheelComboBox" name="cmbShot">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -967,7 +967,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbBadPixMap">
+               <widget class="NoWheelComboBox" name="cmbBadPixMap">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -1006,7 +1006,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="cmbDarkFrame">
+               <widget class="NoWheelComboBox" name="cmbDarkFrame">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -1019,13 +1019,6 @@
                </widget>
               </item>
              </layout>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="FujiRotate_2">
-              <property name="text">
-               <string>Use Fuji rotate</string>
-              </property>
-             </widget>
             </item>
             <item>
              <widget class="Line" name="line_11">
@@ -1711,6 +1704,11 @@
    <extends>QWidget</extends>
    <header>slider_widget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NoWheelComboBox</class>
+   <extends>QComboBox</extends>
+   <header>nowheel_combobox.h</header>
   </customwidget>
  </customwidgets>
  <resources>

@@ -11,8 +11,18 @@ LibRawEx::LibRawEx()
 	m_defaultLibrawOutputParamsPtr = std::make_unique<libraw_output_params_t>(imgdata.params);
 	auto_mul[0] = auto_mul[1] = auto_mul[2] = 1.0f;
 	auto_mul[3] = .0f;
-//#pragma premsg(проинициализировать exparams) 
 	// init exparams
+	exparams.eeci_refine = 0;
+	exparams.es_med_passes = 0;
+	exparams.ca_correc = 0;
+	exparams.cared = 0;
+	exparams.cablue = 0;
+	exparams.cfaline = 0;
+	exparams.linenoise = 0;
+	exparams.cfa_clean = 0;
+	exparams.lclean = 0;
+	exparams.cclean = 0;
+
 }
 
 // from void CLASS scale_colors()
