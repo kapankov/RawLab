@@ -89,6 +89,149 @@ std::array<float, 4> LibRawEx::getAutoWB()
 	return autowb;
 }
 
+#define FORC(cnt) for (c = 0; c < cnt; c++)
+#define FORC4 FORC(4)
+#define TOFF(ptr) ((char *)(&(ptr)) - (char *)th)
+
+void tiff_set(struct tiff_hdr* th, ushort* ntag, ushort tag,
+	ushort type, int count, int val)
+{
+	struct libraw_tiff_tag* tt;
+	int c;
+
+	tt = (struct libraw_tiff_tag*)(ntag + 1) + (*ntag)++;
+	tt->val.i = val;
+	if (type == 1 && count <= 4)
+		FORC(4) tt->val.c[c] = val >> (c << 3);
+	else if (type == 2)
+	{
+		count = strnlen((char*)th + val, count - 1) + 1;
+		if (count <= 4)
+			FORC(4) tt->val.c[c] = ((char*)th)[val + c];
+	}
+	else if (type == 3 && count <= 2)
+		FORC(2) tt->val.s[c] = val >> (c << 4);
+	tt->count = count;
+	tt->type = type;
+	tt->tag = tag;
+}
+
+void LibRawEx::make_tiff_head(struct tiff_hdr* th, int full)
+{
+	int c, psize = 0;
+	struct tm* t;
+	libraw_imgother_t& other = imgdata.other;
+	libraw_iparams_t& idata = imgdata.idata;
+	libraw_image_sizes_t& sizes = imgdata.sizes;
+	libraw_output_params_t& params = imgdata.params;
+	unsigned* oprof = libraw_internal_data.output_data.oprof;
+
+	memset(th, 0, sizeof * th);
+	th->t_order = htonl(0x4d4d4949) >> 16;
+	th->magic = 42;
+	th->ifd = 10;
+	th->rat[0] = th->rat[2] = 300;
+	th->rat[1] = th->rat[3] = 1;
+	FORC(6) th->rat[4 + c] = 1000000;
+
+	th->rat[4] *= other.shutter;
+	th->rat[6] *= other.aperture;
+	th->rat[8] *= other.focal_len;
+	strncpy(th->t_desc, other.desc, 512);
+	strncpy(th->t_make, idata.make, 64);
+	strncpy(th->t_model, idata.model, 64);
+	strcpy(th->soft, "rawlab");
+	t = localtime(&other.timestamp);
+	sprintf(th->date, "%04d:%02d:%02d %02d:%02d:%02d", t->tm_year + 1900,
+		t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	strncpy(th->t_artist, other.artist, 64);
+	if (full)
+	{
+		tiff_set(th, &th->ntag, 254, 4, 1, 0);
+		tiff_set(th, &th->ntag, 256, 4, 1, sizes.width);
+		tiff_set(th, &th->ntag, 257, 4, 1, sizes.height);
+		tiff_set(th, &th->ntag, 258, 3, idata.colors, params.output_bps);
+		if (idata.colors > 2)
+			th->tag[th->ntag - 1].val.i = TOFF(th->bps);
+		FORC4 th->bps[c] = params.output_bps;
+		tiff_set(th, &th->ntag, 259, 3, 1, 1);
+		tiff_set(th, &th->ntag, 262, 3, 1, 1 + (idata.colors > 1));
+	}
+	tiff_set(th, &th->ntag, 270, 2, 512, TOFF(th->t_desc));
+	tiff_set(th, &th->ntag, 271, 2, 64, TOFF(th->t_make));
+	tiff_set(th, &th->ntag, 272, 2, 64, TOFF(th->t_model));
+	if (full)
+	{
+		if (oprof)
+			psize = ntohl(oprof[0]);
+		tiff_set(th, &th->ntag, 273, 4, 1, sizeof * th + psize);
+		tiff_set(th, &th->ntag, 277, 3, 1, idata.colors);
+		tiff_set(th, &th->ntag, 278, 4, 1, sizes.height);
+		tiff_set(th, &th->ntag, 279, 4, 1,
+			sizes.height * sizes.width * idata.colors * params.output_bps / 8);
+	}
+	else
+		tiff_set(th, &th->ntag, 274, 3, 1, "12435867"[sizes.flip] - '0');
+	tiff_set(th, &th->ntag, 282, 5, 1, TOFF(th->rat[0]));
+	tiff_set(th, &th->ntag, 283, 5, 1, TOFF(th->rat[2]));
+	tiff_set(th, &th->ntag, 284, 3, 1, 1);
+	tiff_set(th, &th->ntag, 296, 3, 1, 2);
+	tiff_set(th, &th->ntag, 305, 2, 32, TOFF(th->soft));
+	tiff_set(th, &th->ntag, 306, 2, 20, TOFF(th->date));
+	tiff_set(th, &th->ntag, 315, 2, 64, TOFF(th->t_artist));
+	tiff_set(th, &th->ntag, 34665, 4, 1, TOFF(th->nexif));
+	if (psize)
+		tiff_set(th, &th->ntag, 34675, 7, psize, sizeof * th);
+	tiff_set(th, &th->nexif, 33434, 5, 1, TOFF(th->rat[4]));
+	tiff_set(th, &th->nexif, 33437, 5, 1, TOFF(th->rat[6]));
+	tiff_set(th, &th->nexif, 34855, 3, 1, other.iso_speed);
+	tiff_set(th, &th->nexif, 37386, 5, 1, TOFF(th->rat[8]));
+	if (other.gpsdata[1])
+	{
+		tiff_set(th, &th->ntag, 34853, 4, 1, TOFF(th->ngps));
+		tiff_set(th, &th->ngps, 0, 1, 4, 0x202);
+		tiff_set(th, &th->ngps, 1, 2, 2, other.gpsdata[29]);
+		tiff_set(th, &th->ngps, 2, 5, 3, TOFF(th->gps[0]));
+		tiff_set(th, &th->ngps, 3, 2, 2, other.gpsdata[30]);
+		tiff_set(th, &th->ngps, 4, 5, 3, TOFF(th->gps[6]));
+		tiff_set(th, &th->ngps, 5, 1, 1, other.gpsdata[31]);
+		tiff_set(th, &th->ngps, 6, 5, 1, TOFF(th->gps[18]));
+		tiff_set(th, &th->ngps, 7, 5, 3, TOFF(th->gps[12]));
+		tiff_set(th, &th->ngps, 18, 2, 12, TOFF(th->gps[20]));
+		tiff_set(th, &th->ngps, 29, 2, 12, TOFF(th->gps[23]));
+		memcpy(th->gps, other.gpsdata, sizeof th->gps);
+	}
+}
+
+#define EXIF_MARKER  (JPEG_APP0 + 1)     /* JPEG marker code for EXIF */
+#define EXIF_OVERHEAD_LEN  6            /* size of non-profile data in APP2 */
+
+void jpeg_write_tiff_hdr(j_compress_ptr cinfo, const JOCTET* data_ptr, const unsigned int data_len)
+{
+	unsigned int length = data_len;
+	/* Write the JPEG marker header (APP1 code and marker length) */
+	jpeg_write_m_header(cinfo, EXIF_MARKER,
+		(unsigned int)(length + EXIF_OVERHEAD_LEN));
+
+	/* Write the marker identifying string "Exif" (null-terminated).  We
+	 * code it in this less-than-transparent way so that the code works even if
+	 * the local character set is not ASCII.
+	 */
+	jpeg_write_m_byte(cinfo, 0x45);
+	jpeg_write_m_byte(cinfo, 0x78);
+	jpeg_write_m_byte(cinfo, 0x69);
+	jpeg_write_m_byte(cinfo, 0x66);
+	jpeg_write_m_byte(cinfo, 0x0);
+	jpeg_write_m_byte(cinfo, 0x0);
+
+	/* Add the EXIF data */
+	while (length--) {
+		jpeg_write_m_byte(cinfo, *data_ptr);
+		data_ptr++;
+	}
+
+}
+
 int LibRawEx::rawlab_jpeg_writer(const char* filename)
 {
 	int ret = 0;
@@ -130,6 +273,10 @@ int LibRawEx::rawlab_jpeg_writer(const char* filename)
 			jpeg_set_defaults(&cinfo);
 			jpeg_set_quality(&cinfo, m_jpegQuality, TRUE);
 			jpeg_start_compress(&cinfo, TRUE);
+			/* add exif */
+			struct tiff_hdr th;
+			make_tiff_head(&th, 1);
+			jpeg_write_tiff_hdr(&cinfo, (const JOCTET*)&th, sizeof(th));
 			/* add icc-profile */
 			if (imgdata.params.output_profile && imgdata.params.camera_profile)
 			{

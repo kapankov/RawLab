@@ -90,6 +90,7 @@ public:
 	int m_jpegQuality;
 
 	std::array<float, 4> getAutoWB();
+	void make_tiff_head(struct tiff_hdr* th, int full);
 	int rawlab_jpeg_writer(const char* filename);
 
 	// demosaic pack
