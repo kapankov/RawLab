@@ -93,6 +93,9 @@ std::array<float, 4> LibRawEx::getAutoWB()
 #define FORC4 FORC(4)
 #define TOFF(ptr) ((char *)(&(ptr)) - (char *)th)
 
+#define EXIF_MARKER  (JPEG_APP0 + 1)     /* JPEG marker code for EXIF */
+#define EXIF_OVERHEAD_LEN  6            /* size of non-profile data in APP2 */
+
 void tiff_set(struct tiff_hdr* th, ushort* ntag, ushort tag,
 	ushort type, int count, int val)
 {
@@ -116,6 +119,10 @@ void tiff_set(struct tiff_hdr* th, ushort* ntag, ushort tag,
 	tt->tag = tag;
 }
 
+/* 
+	было бы неплохо использовать void LibRaw::tiff_head(struct tiff_hdr *th, int full) 
+	пришлось использовать слегка модифицированную копию
+*/
 void LibRawEx::make_tiff_head(struct tiff_hdr* th, int full)
 {
 	int c, psize = 0;
@@ -124,12 +131,12 @@ void LibRawEx::make_tiff_head(struct tiff_hdr* th, int full)
 	libraw_iparams_t& idata = imgdata.idata;
 	libraw_image_sizes_t& sizes = imgdata.sizes;
 	libraw_output_params_t& params = imgdata.params;
-	unsigned* oprof = libraw_internal_data.output_data.oprof;
+	unsigned int* oprof = libraw_internal_data.output_data.oprof;
 
 	memset(th, 0, sizeof * th);
 	th->t_order = htonl(0x4d4d4949) >> 16;
-	th->magic = 42;
-	th->ifd = 10;
+	th->magic = 42;	// 2A00
+	th->ifd = 10;	// 0A000000;
 	th->rat[0] = th->rat[2] = 300;
 	th->rat[1] = th->rat[3] = 1;
 	FORC(6) th->rat[4 + c] = 1000000;
@@ -147,45 +154,46 @@ void LibRawEx::make_tiff_head(struct tiff_hdr* th, int full)
 	strncpy(th->t_artist, other.artist, 64);
 	if (full)
 	{
-		tiff_set(th, &th->ntag, 254, 4, 1, 0);
-		tiff_set(th, &th->ntag, 256, 4, 1, sizes.width);
-		tiff_set(th, &th->ntag, 257, 4, 1, sizes.height);
-		tiff_set(th, &th->ntag, 258, 3, idata.colors, params.output_bps);
+		tiff_set(th, &th->ntag, 254, 4, 1, 0);	// SubfileType
+		tiff_set(th, &th->ntag, 256, 4, 1, sizes.width);	// ImageWidth
+		tiff_set(th, &th->ntag, 257, 4, 1, sizes.height);	// ImageHeight
+		tiff_set(th, &th->ntag, 258, 3, idata.colors, params.output_bps);	// BitsPerSample
 		if (idata.colors > 2)
 			th->tag[th->ntag - 1].val.i = TOFF(th->bps);
 		FORC4 th->bps[c] = params.output_bps;
-		tiff_set(th, &th->ntag, 259, 3, 1, 1);
-		tiff_set(th, &th->ntag, 262, 3, 1, 1 + (idata.colors > 1));
+		tiff_set(th, &th->ntag, 259, 3, 1, 1);	// Compression
+		tiff_set(th, &th->ntag, 262, 3, 1, 1 + (idata.colors > 1));	// PhotometricInterpretation
 	}
-	tiff_set(th, &th->ntag, 270, 2, 512, TOFF(th->t_desc));
-	tiff_set(th, &th->ntag, 271, 2, 64, TOFF(th->t_make));
-	tiff_set(th, &th->ntag, 272, 2, 64, TOFF(th->t_model));
+	tiff_set(th, &th->ntag, 270, 2, 512, TOFF(th->t_desc));	// ImageDescription
+	tiff_set(th, &th->ntag, 271, 2, 64, TOFF(th->t_make));	// Make
+	tiff_set(th, &th->ntag, 272, 2, 64, TOFF(th->t_model));	// 	Model
 	if (full)
 	{
 		if (oprof)
 			psize = ntohl(oprof[0]);
-		tiff_set(th, &th->ntag, 273, 4, 1, sizeof * th + psize);
-		tiff_set(th, &th->ntag, 277, 3, 1, idata.colors);
-		tiff_set(th, &th->ntag, 278, 4, 1, sizes.height);
+		tiff_set(th, &th->ntag, 273, 4, 1, sizeof(tiff_hdr) + psize);	// StripOffsets ???
+		tiff_set(th, &th->ntag, 277, 3, 1, idata.colors);	// SamplesPerPixel
+		tiff_set(th, &th->ntag, 278, 4, 1, sizes.height);	// RowsPerStrip
 		tiff_set(th, &th->ntag, 279, 4, 1,
-			sizes.height * sizes.width * idata.colors * params.output_bps / 8);
+			sizes.height * sizes.width * idata.colors * params.output_bps / 8);	// StripByteCounts
 	}
 	else
-		tiff_set(th, &th->ntag, 274, 3, 1, "12435867"[sizes.flip] - '0');
-	tiff_set(th, &th->ntag, 282, 5, 1, TOFF(th->rat[0]));
-	tiff_set(th, &th->ntag, 283, 5, 1, TOFF(th->rat[2]));
-	tiff_set(th, &th->ntag, 284, 3, 1, 1);
-	tiff_set(th, &th->ntag, 296, 3, 1, 2);
-	tiff_set(th, &th->ntag, 305, 2, 32, TOFF(th->soft));
-	tiff_set(th, &th->ntag, 306, 2, 20, TOFF(th->date));
-	tiff_set(th, &th->ntag, 315, 2, 64, TOFF(th->t_artist));
-	tiff_set(th, &th->ntag, 34665, 4, 1, TOFF(th->nexif));
+		tiff_set(th, &th->ntag, 274, 3, 1, "12435867"[sizes.flip] - '0');	// Orientation
+	tiff_set(th, &th->ntag, 282, 5, 1, TOFF(th->rat[0]));	// 	XResolution
+	tiff_set(th, &th->ntag, 283, 5, 1, TOFF(th->rat[2]));	// 	YResolution
+	tiff_set(th, &th->ntag, 284, 3, 1, 1);	// PlanarConfiguration = Chunky
+	tiff_set(th, &th->ntag, 296, 3, 1, 2);	// ResolutionUnit = inches
+	tiff_set(th, &th->ntag, 305, 2, 32, TOFF(th->soft));	// Software
+	tiff_set(th, &th->ntag, 306, 2, 20, TOFF(th->date));	// ModifyDate
+	tiff_set(th, &th->ntag, 315, 2, 64, TOFF(th->t_artist));	// Artist
+	tiff_set(th, &th->ntag, 34665, 4, 1, TOFF(th->nexif));	// ExifOffset
 	if (psize)
-		tiff_set(th, &th->ntag, 34675, 7, psize, sizeof * th);
-	tiff_set(th, &th->nexif, 33434, 5, 1, TOFF(th->rat[4]));
-	tiff_set(th, &th->nexif, 33437, 5, 1, TOFF(th->rat[6]));
-	tiff_set(th, &th->nexif, 34855, 3, 1, other.iso_speed);
-	tiff_set(th, &th->nexif, 37386, 5, 1, TOFF(th->rat[8]));
+		tiff_set(th, &th->ntag, 34675, 7, psize, sizeof(tiff_hdr));	// ICC_Profile
+	tiff_set(th, &th->nexif, 33434, 5, 1, TOFF(th->rat[4]));	// ExposureTime
+	tiff_set(th, &th->nexif, 33437, 5, 1, TOFF(th->rat[6]));	// FNumber
+	tiff_set(th, &th->nexif, 34855, 3, 1, other.iso_speed);	// ISO
+	tiff_set(th, &th->nexif, 37386, 5, 1, TOFF(th->rat[8]));	// 	FocalLength
+	// 	GPSInfo
 	if (other.gpsdata[1])
 	{
 		tiff_set(th, &th->ntag, 34853, 4, 1, TOFF(th->ngps));
@@ -202,9 +210,6 @@ void LibRawEx::make_tiff_head(struct tiff_hdr* th, int full)
 		memcpy(th->gps, other.gpsdata, sizeof th->gps);
 	}
 }
-
-#define EXIF_MARKER  (JPEG_APP0 + 1)     /* JPEG marker code for EXIF */
-#define EXIF_OVERHEAD_LEN  6            /* size of non-profile data in APP2 */
 
 void jpeg_write_tiff_hdr(j_compress_ptr cinfo, const JOCTET* data_ptr, const unsigned int data_len)
 {
@@ -272,27 +277,20 @@ int LibRawEx::rawlab_jpeg_writer(const char* filename)
 			cinfo.in_color_space = JCS_RGB;       /* colorspace of input image */
 			jpeg_set_defaults(&cinfo);
 			jpeg_set_quality(&cinfo, m_jpegQuality, TRUE);
+			cinfo.write_JFIF_header = false;
 			jpeg_start_compress(&cinfo, TRUE);
-			/* add exif */
-			struct tiff_hdr th;
-			make_tiff_head(&th, 1);
-			jpeg_write_tiff_hdr(&cinfo, (const JOCTET*)&th, sizeof(th));
-			/* add icc-profile */
-			if (imgdata.params.output_profile && imgdata.params.camera_profile)
+			/* add exif with icc profile */
+			unsigned int* oprof = libraw_internal_data.output_data.oprof;
+			if (JOCTET* th = new JOCTET[oprof ? sizeof(tiff_hdr) + ntohl(oprof[0]) : sizeof(tiff_hdr)])
 			{
-				FILE* iccprofile;
-				if (fopen_s(&iccprofile, imgdata.params.output_profile, "rb") == 0)
-				{
-					fseek(iccprofile, 0, SEEK_END);
-					int size = ftell(iccprofile);
-					fseek(iccprofile, 0, SEEK_SET);
-					unsigned char* icc_data_ptr = new unsigned char[size];
-					if (fread(icc_data_ptr, 1, size, iccprofile) == size)
-						jpeg_write_icc_profile(&cinfo, icc_data_ptr, size);
-					delete[] icc_data_ptr;
-					fclose(iccprofile);
-				}
+				make_tiff_head((tiff_hdr*)th, 1);
+				if (oprof)
+					memcpy(&th[sizeof(tiff_hdr)], (const JOCTET*)oprof, ntohl(oprof[0]));
+				jpeg_write_tiff_hdr(&cinfo, th, oprof ? sizeof(tiff_hdr) + ntohl(oprof[0]) : sizeof(tiff_hdr));
+
+				delete [] th;
 			}
+
 			while (cinfo.next_scanline < cinfo.image_height) {
 				row_pointer[0] = &imgBuff[cinfo.next_scanline * row_stride];
 				(void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
