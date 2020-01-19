@@ -3,8 +3,9 @@
 
 #include "stdafx.h"
 
-#define isequal(x,y,p) (abs((x)-(y))<(p))
-constexpr cmsInt32Number iccType = 2;
+//#define isequal(x,y,p) (abs((x)-(y))<(p))
+//constexpr cmsInt32Number iccType = 2;
+
 // from http://brucelindbloom.com/index.html?WorkingSpaceInfo.html
 constexpr cmsCIExyYTRIPLE adobe_primaries = {
 {0.6400, 0.3300, 1.0},
@@ -12,7 +13,7 @@ constexpr cmsCIExyYTRIPLE adobe_primaries = {
 {0.1500, 0.0600, 1.0}
 };
 
-cmsHPROFILE cmsCreateAdobeRGBProfile()
+cmsHPROFILE cmsCreate_AdobeRGBProfile()
 {
 	cmsToneCurve* curve[3];
 	cmsCIExyY whitepoint = { 0.3127, 0.3290, 1.0 };
@@ -22,6 +23,44 @@ cmsHPROFILE cmsCreateAdobeRGBProfile()
 	return hProfile;
 }
 
+void* getProfile(cmsHPROFILE hProfile)
+{
+	void* MemPtr = nullptr;
+	cmsUInt32Number BytesNeeded = 0;
+	if (cmsSaveProfileToMem(hProfile, MemPtr, &BytesNeeded))
+	{
+		if (BytesNeeded)
+		{
+			MemPtr = new unsigned char[BytesNeeded];
+			cmsSaveProfileToMem(hProfile, MemPtr, &BytesNeeded);
+		}
+	}
+	cmsCloseProfile(hProfile);
+	return MemPtr;
+}
+
+void* getAdobeProfile()
+{
+	void* MemPtr = nullptr;
+	if (cmsHPROFILE hProfile = cmsCreate_AdobeRGBProfile())
+	{
+		MemPtr = getProfile(hProfile);
+		cmsCloseProfile(hProfile);
+	}
+	return MemPtr;
+}
+
+void* getsRGBProfile()
+{
+	void* MemPtr = nullptr;
+	if (cmsHPROFILE hProfile = cmsCreate_sRGBProfile())
+	{
+		MemPtr = getProfile(hProfile);
+		cmsCloseProfile(hProfile);
+	}
+	return MemPtr;
+}
+/*
 cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyYTRIPLE* pprimaries, cmsCIExyY* pwhitepoint)
 {
 	cmsHPROFILE hProfile = 0;
@@ -96,12 +135,6 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 			whitepoint = d65_wp;
 			curve[0] = curve[1] = curve[2] = tonecurve ? tonecurve : cmsBuildGamma(NULL, 1.00);
 			hProfile = cmsCreateRGBProfile(&whitepoint, &xyz_primaries, curve);
-/*
-			cmsSetProfileVersion(hProfile, 4.3);
-			cmsSetDeviceClass(hProfile, cmsSigAbstractClass);
-			cmsSetColorSpace(hProfile, cmsSigXYZData);
-			cmsSetPCS(hProfile, cmsSigXYZData);*/
-
 			break;
 		case 6: // ACES
 			whitepoint = d65_wp; // d60_aces;
@@ -111,13 +144,7 @@ cmsHPROFILE cmsCreateProfile(int iColorSpace, cmsToneCurve* tonecurve, cmsCIExyY
 		}
 		if (!tonecurve) cmsFreeToneCurve(curve[0]);
 	}
-/*	if (hProfile)
-	{
-//		cmsHPROFILE p = cmsCreate_sRGBProfile();
-		cmsSetProfileVersion(hProfile, 2.1);
-		cmsSaveProfileToFile(hProfile, "e:\\raws\\samples\\debug.icc ");
-//		cmsCloseProfile(p);
-	}*/
+
 	return hProfile;
 }
 
@@ -202,8 +229,8 @@ void CreateChromatisities(const float(*mtx)[3], cmsCIExyYTRIPLE* pprimaries, cms
 {
 	double invmatx[3][3], inverse[3][3], num;
 	int i, j;
-	for (i = 0; i < 3; i++) {			/* Normalize cam_rgb so that */
-		for (num = j = 0; j < 3; j++)	/* invmatx * (1,1,1) is (1,1,1,1) */
+	for (i = 0; i < 3; i++) {			// Normalize cam_rgb so that
+		for (num = j = 0; j < 3; j++)	// invmatx * (1,1,1) is (1,1,1,1)
 			num += mtx[i][j];
 		for (j = 0; j < 3; j++)
 			invmatx[i][j] = mtx[i][j] / num;
@@ -225,7 +252,7 @@ void CreateChromatisities(const float(*mtx)[3], cmsCIExyYTRIPLE* pprimaries, cms
 	pwhitepoint->x = (invmatx[0][0] + invmatx[0][1] + invmatx[0][2]) / (invmatx[0][0] + invmatx[0][1] + invmatx[0][2] + invmatx[1][0] + invmatx[1][1] + invmatx[1][2] + invmatx[2][0] + invmatx[2][1] + invmatx[2][2]);
 	pwhitepoint->y = (invmatx[1][0] + invmatx[1][1] + invmatx[1][2]) / (invmatx[0][0] + invmatx[0][1] + invmatx[0][2] + invmatx[1][0] + invmatx[1][1] + invmatx[1][2] + invmatx[2][0] + invmatx[2][1] + invmatx[2][2]);
 	pwhitepoint->Y = 1.0;
-}
+}*/
 
 bool TransformColor(void* buff, const size_t width, const size_t height, const int bps, const cmsHPROFILE hInProfile, const cmsHPROFILE hOutProfile)
 {
@@ -254,12 +281,12 @@ bool TransformColor(void* buff, const size_t width, const size_t height, const i
 	return result;
 }
 
-bool TransformToMonitorColor(void* buff, size_t width, size_t height, int bps, cmsHPROFILE hInProfile, char* szMonitorProfile)
+bool TransformToColor(void* buff, size_t width, size_t height, int bps, cmsHPROFILE hInProfile, char* szProfile)
 {
 	bool result = false;
 	cmsHPROFILE hOutProfile = 0;
-	if (szMonitorProfile)
-		hOutProfile = cmsOpenProfileFromFile(szMonitorProfile, "r");
+	if (szProfile)
+		hOutProfile = cmsOpenProfileFromFile(szProfile, "r");
 	else
 		hOutProfile = cmsCreate_sRGBProfile();
 	if (hOutProfile)
@@ -271,8 +298,22 @@ bool TransformToMonitorColor(void* buff, size_t width, size_t height, int bps, c
 	return result;
 }
 
+bool TransformToMonitorColor(void* buff, size_t width, size_t height, int bps, void* pProfile, char* szMonitorProfile)
+{
+	cmsHPROFILE hProfile = 0;
+	if (pProfile)
+	{
+		cmsUInt32Number len = ntohl(*static_cast<unsigned int*>(pProfile));
+		hProfile = cmsOpenProfileFromMem(pProfile, len);
+	}
+	else hProfile = cmsCreate_sRGBProfile();
+	if (hProfile) 
+		return TransformToColor(buff, width, height, bps, hProfile, szMonitorProfile);
+	return false;
+}
+
 // Преобразовать буфер из исходного цветового пространства в ЦП монитора
-bool TransformToMonitorColor(void* buff, const size_t width, const size_t height, const int bps, const char* szMonitorProfile, const int iColorSpace, const double* gamm, const float(*mtx)[3], const char* szProfile)
+/*bool TransformToMonitorColor(void* buff, const size_t width, const size_t height, const int bps, const char* szMonitorProfile, const int iColorSpace, const double* gamm, const float(*mtx)[3], const char* szProfile)
 {
 	bool result = false;
 	// не пытаться конвертировать из sRGB в sRGB
@@ -312,7 +353,7 @@ bool TransformToMonitorColor(void* buff, const size_t width, const size_t height
 	}
 
 	return result;
-}
+}*/
 
 std::string GetMonitorProfile(HWND hWnd)
 {

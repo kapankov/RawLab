@@ -551,24 +551,14 @@ void RawLab::ExtractProcessedRaw()
 	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
 	m_pRawBuff->m_colors = colors;
 	libraw_output_params_t& lrParams = imgdata.params;
-	bool icc_conv = lrParams.output_profile && lrParams.camera_profile;
-//	if (lrParams.output_color!=1 || icc_conv)
+	// copy oprof
+	if (void* oprof = m_lr->getInternalOutputProfile())
 	{
-		m_pRawBuff->m_params = std::make_unique<CmsParams>();
-		CmsParams* cmsParams = m_pRawBuff->m_params.get(); //po
-		if (icc_conv)
-		{
-			cmsParams->m_iColorSpace = -1;
-			cmsParams->output_profile = lrParams.output_profile;
-		}
-		else
-		{
-			cmsParams->m_iColorSpace = lrParams.output_color;
-			memcpy(cmsParams->gamm, lrParams.gamm, sizeof(lrParams.gamm));
-			if (lrParams.output_color == 0)
-				memcpy(cmsParams->cam_xyz, imgdata.color.cam_xyz, sizeof(imgdata.color.cam_xyz));
-		}
+		size_t len = ntohl(*static_cast<unsigned int*>(oprof));
+		m_pRawBuff->m_profile = new unsigned char[len];
+		memcpy(m_pRawBuff->m_profile, oprof, len);
 	}
+	// else ???
 }
 
 void RawLab::ApplyParams()
@@ -849,8 +839,12 @@ void RawLab::UpdateCms(bool enable)
 
 void RawLab::setWBSliders(const float(&mul)[4], bool setDefault)
 {
-	auto safewbmul = [](const float(&mul)[4], size_t n) -> float
+	bool isAutoWB = false;
+	if (fabs(mul[0]) < FLT_EPSILON && fabs(mul[1]) < FLT_EPSILON && fabs(mul[2]) < FLT_EPSILON)
+		isAutoWB = true;
+	auto safewbmul = [&isAutoWB](const float(&mul)[4], size_t n) -> float
 	{
+		if (isAutoWB) return .0f;
 		if (fabs(mul[1]) < FLT_EPSILON) return 1.0f;
 		float result = (mul[1] - 16.0f) < FLT_EPSILON ? mul[n] : mul[n] / mul[1];
 		return result; // fabs(result) < FLT_EPSILON ? 1.0f : result;
@@ -915,7 +909,7 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 	const libraw_output_params_t &params = imgdata.params;
 	const librawex_output_params_t& exparams = lr.exparams;
 	const libraw_colordata_t &color = imgdata.color;
-	float tempwb[4] = { 1.0f,1.0f,1.0f,1.0f };
+	float tempwb[4] = { .0f, .0f, .0f, .0f };
 	auto safewb = [&tempwb](const float(&mul)[4]) -> float(&)[4]
 	{
 		tempwb[0] = 1.0f;
@@ -943,7 +937,7 @@ void RawLab::onUpdateParamControls(const LibRawEx& lr)
 	m_wbpresets.clear();
 
 	// заполнить пресеты баланса белого
-	m_wbpresets.emplace_back(QString("LibRaw Auto"), tempwb); // обязательно первым, т.к. tempwb заполнен 1.0f
+	m_wbpresets.emplace_back(QString("LibRaw Auto"), tempwb); // обязательно первым
 	m_wbpresets.emplace_back(QString("LibRaw Daylight"), safewb(color.pre_mul));
 	m_wbpresets.emplace_back(QString("As Shot"), safewb(color.cam_mul));
 	// lightsources
@@ -1920,14 +1914,10 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 			{
 				RgbBuffPtr pRgbBuff = GetBufFromJpeg(mem_thumb->data, mem_thumb->data_size, true);
 				
-				if (!pRgbBuff->m_params) pRgbBuff->m_params = std::make_unique<CmsParams>();
-				CmsParams* params = pRgbBuff->m_params.get();
 				// определим настройку ColorSpace
-				params->m_iColorSpace = 
-					(imgdata.makernotes.common.ColorSpace == LIBRAW_COLORSPACE_AdobeRGB || 
-						imgdata.color.ExifColorSpace == LIBRAW_COLORSPACE_AdobeRGB) ? 2 : 1;
-				if (params->m_iColorSpace == 2)
-					params->output_profile = "PREVIEW"; // использовать полный профиль AdobeRGB
+				if (imgdata.makernotes.common.ColorSpace == LIBRAW_COLORSPACE_AdobeRGB || 
+						imgdata.color.ExifColorSpace == LIBRAW_COLORSPACE_AdobeRGB)
+					pRgbBuff->m_profile = getAdobeProfile();
 				result = ui.openGLWidget->setRgbBuff(std::move(pRgbBuff));
 			}
 			else if (mem_thumb->type == LIBRAW_IMAGE_BITMAP)

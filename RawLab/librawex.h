@@ -93,6 +93,11 @@ public:
 	void make_tiff_head(struct tiff_hdr* th, int full);
 	int rawlab_jpeg_writer(const char* filename);
 
+	void* getInternalOutputProfile() const
+	{
+		return libraw_internal_data.output_data.oprof;
+	}
+
 	// demosaic pack
 	void set_pre_interpolate_cb(process_step_callback cb, bool def_cb = false);
 	void set_interpolate_bayer_cb(process_step_callback cb, bool def_cb = false);

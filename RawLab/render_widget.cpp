@@ -103,33 +103,13 @@ bool RenderWidget::UpdateImage(bool resetZoom)
 			{
 				// создать буфер для CMS
 				pCmsImgBuff = m_pImgBuff->copy();
-				CmsParams* params = pCmsImgBuff->m_params.get();
-				if (params && params->m_iColorSpace == 2 && params->output_profile.compare("PREVIEW")==0)
-				{
-					if (cmsHPROFILE hInProfile = cmsCreateAdobeRGBProfile())
-					{
-						TransformToMonitorColor(
-							pCmsImgBuff->m_buff,
-							pCmsImgBuff->m_width,
-							pCmsImgBuff->m_height,
-							pCmsImgBuff->m_bits,
-							hInProfile,
-							const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()));
-						cmsCloseProfile(hInProfile);
-					}
-				}
-				else
-					TransformToMonitorColor(
-						pCmsImgBuff->m_buff,
-						pCmsImgBuff->m_width,
-						pCmsImgBuff->m_height,
-						pCmsImgBuff->m_bits,
-						const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()),
-						params ? params->m_iColorSpace : 1,
-						params&& abs(params->gamm[0]) > DBL_EPSILON ? params->gamm : nullptr,
-						params&& params->m_iColorSpace == 0 && abs(params->cam_xyz[0][0]) > FLT_EPSILON ? params->cam_xyz : nullptr,
-						params&& params->m_iColorSpace == -1 ? params->output_profile.c_str() : nullptr
-					);
+				TransformToMonitorColor(
+					pCmsImgBuff->m_buff,
+					pCmsImgBuff->m_width,
+					pCmsImgBuff->m_height,
+					pCmsImgBuff->m_bits,
+					pCmsImgBuff->m_profile,
+					const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()));
 				pixels = pCmsImgBuff->m_buff;
 			}
 

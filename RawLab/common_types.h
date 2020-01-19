@@ -27,14 +27,6 @@ public:
 
 using histogram_channel = std::array<unsigned int, 256>;
 
-struct CmsParams
-{
-	int m_iColorSpace = 1; // 0 - Undefined(RAW), 1 - sRGB, 2 - AdobeRGB, 3 - WideRGB, 4 - ProPhoto, 5 - XYZ, 6 - ACES
-	float cam_xyz[4][3] = {}; // Libraw imgdata.color.cam_xyz
-	double gamm[6] = {}; // Libraw imgdata.params.gamm
-	std::string output_profile; // LibRaw imgdata.params.output_profile
-
-};
 
 struct RgbBuff
 {
@@ -43,12 +35,12 @@ struct RgbBuff
 	size_t m_height;
 	int m_bits;	// только кратный 8
 	int m_colors;
-	std::unique_ptr<CmsParams> m_params;
+	void* m_profile;
 
 	std::array<histogram_channel, 3> m_histogram = { };
 
-	RgbBuff() : m_buff(nullptr), m_width(0), m_height(0), m_bits(8), m_colors(3) {}
-	~RgbBuff() { delete[] m_buff; }
+	RgbBuff() : m_buff(nullptr), m_width(0), m_height(0), m_bits(8), m_colors(3), m_profile(nullptr) {}
+	~RgbBuff() { delete[] m_buff; delete[] m_profile; }
 
 	std::unique_ptr<RgbBuff> copy()
 	{
@@ -57,13 +49,11 @@ struct RgbBuff
 		mycopy->m_height = m_height;
 		mycopy->m_bits = m_bits;
 		mycopy->m_colors = m_colors;
-		if (m_params)
+		if (m_profile)
 		{
-			CmsParams& params= *(mycopy->m_params = std::make_unique<CmsParams>()).get();
-			params.m_iColorSpace = m_params->m_iColorSpace;
-			memcpy(params.gamm, m_params->gamm, sizeof(m_params->gamm));
-			memcpy(params.cam_xyz, m_params->cam_xyz, sizeof(m_params->cam_xyz));
-			params.output_profile = m_params->output_profile;
+			size_t len = ntohl(*static_cast<unsigned int*>(m_profile));
+			mycopy->m_profile = new unsigned char[len];
+			memcpy(mycopy->m_profile, m_profile, len);
 		}
 
 		size_t stride;
