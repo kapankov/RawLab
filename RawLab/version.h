@@ -4,7 +4,8 @@
 #define MAJOR_VER        0
 #define MINOR_VER        6
 #define RELEASE_VER      4
-#define BUILD_VER        35
+#define BUILD_VER        38
+#define NAME_VER         "Cherdyn"
 #define APP_VER          MAJOR_VER,MINOR_VER,RELEASE_VER,BUILD_VER
 #define VER_STR_(VER)    #VER
 #define VER_STR(VER)     VER_STR_(VER) "\0"

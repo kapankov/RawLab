@@ -161,7 +161,7 @@
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>qtmain.lib;jpeg.lib;libxml2.lib;libraw.lib;lcms2.lib;Qt5Widgets.lib;Qt5Core.lib;Qt5Gui.lib;Qt5OpenGL.lib;opengl32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <EnableUAC>false</EnableUAC>
     </Link>
     <QtMoc>
       <IncludePath>.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);..\jpeg-9c;..\libxml2-2.9.9\include;..\libiconv-1.16\include;..\lcms2-2.9\include;..\RawSpeed\pthreads;..\libraw;.\LibRaw-demosaic-pack;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;%(AdditionalIncludeDirectories)</IncludePath>
@@ -194,8 +194,7 @@
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>qtmain.lib;jpeg.lib;libxml2.lib;libraw.lib;lcms2.lib;Qt5Widgets.lib;Qt5Core.lib;Qt5Gui.lib;Qt5OpenGL.lib;opengl32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <UACUIAccess>true</UACUIAccess>
+      <EnableUAC>false</EnableUAC>
     </Link>
     <QtMoc>
       <IncludePath>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);..\jpeg-9c;..\libxml2-2.9.9\include;..\libiconv-1.16\include;..\lcms2-2.9\include;..\RawSpeed\pthreads;..\libraw;.\LibRaw-demosaic-pack;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL;%(AdditionalIncludeDirectories)</IncludePath>

@@ -75,20 +75,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="chbTiff">
-       <property name="text">
-        <string>generate tiff (on) or ppm (off) format</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="chbBps">
-       <property name="text">
-        <string>generate 16-bit-per-sample (on) or 8 bps (off)</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="verticalSpacer">
        <property name="orientation">
         <enum>Qt::Vertical</enum>

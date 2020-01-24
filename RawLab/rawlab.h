@@ -58,6 +58,7 @@ private:
 	QLabel* m_plblInfo;
 
 	QString m_filename; // открытый файл
+	QString m_lastSavedDir;
 	QThread m_thread; // объект управления потоком обработки RAW
 	RgbBuffPtr	m_pRawBuff;
 	// отслеживает изменения в каталоге с профилями камер

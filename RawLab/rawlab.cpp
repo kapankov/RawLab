@@ -72,22 +72,22 @@ QString FlipModes[] = {
 
 QString getInputProfilesDir()
 {
-	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/iprofiles";
+	return QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0) + "/iprofiles";
 }
 
 QString getOutputProfilesDir()
 {
-	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/oprofiles";
+	return QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0) + "/oprofiles";
 }
 
 QString getBadPixMapDir()
 {
-	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/badpixels";
+	return QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0) + "/badpixels";
 }
 
 QString getDarkFrameDir()
 {
-	return QFileInfo(QCoreApplication::applicationFilePath()).path() + "/darkframe";
+	return QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0) + "/darkframe";
 }
 
 RawLab::RawLab(QWidget *parent)
@@ -96,17 +96,17 @@ RawLab::RawLab(QWidget *parent)
 {
 	ui.setupUi(this);
 
-	// hide menu item - Switch View
 	ui.menu_View->removeAction(ui.actionSwitch_View);
 
 	m_lr = std::make_unique<LibRawEx>();
+	QString appDataPath = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
+	if (!QDir(appDataPath).exists())
+		QDir().mkdir(appDataPath);
 
-	m_settings.setPath(QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
+	m_settings.setPath(appDataPath.toStdString());
 	m_settings.setDefaultValue(std::string("lastdir"),
 		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
 	m_settings.setDefaultValue(std::string("autogreen2"), std::string("true"));
-	m_settings.setDefaultValue(std::string("tiff"), std::string("true"));
-	m_settings.setDefaultValue(std::string("bps"), std::string("16"));
 	m_settings.setDefaultValue(std::string("cms"), std::string("1")); // CMS is On
 	m_settings.setDefaultValue(std::string("pnlpos"), std::string("left")); // main panel position
 
@@ -550,7 +550,6 @@ void RawLab::ExtractProcessedRaw()
 	m_pRawBuff->m_bits = force8bit ? 8 : ibps;
 	assert(colors == 3); // вот когда это не равно 3, найти пример не удалось
 	m_pRawBuff->m_colors = colors;
-	libraw_output_params_t& lrParams = imgdata.params;
 	// copy oprof
 	if (void* oprof = m_lr->getInternalOutputProfile())
 	{
@@ -565,10 +564,10 @@ void RawLab::ApplyParams()
 {
 	libraw_output_params_t& params = m_lr->imgdata.params;
 	librawex_output_params_t& exparams = m_lr->exparams;
-	// tiff or ppm/pgm output format
-	params.output_tiff = m_settings.getValue(std::string("tiff")).compare(std::string("true")) == 0 ? 1 : 0;
+	// always tiff, not ppm/pgm output format
+	params.output_tiff = 1;
 	// 16 or 8 bit support
-	params.output_bps = m_settings.getValue(std::string("bps")).compare(std::string("16")) == 0 ? 16 : 8;
+	params.output_bps = 16;
 	// баланс белого
 	m_lastWBPreset = ui.cmbWhiteBalance->currentText();
 	float(&mul)[4] = params.user_mul;
@@ -1952,34 +1951,53 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 
 void RawLab::onSave()
 {
-	bool istiff = m_lr->imgdata.params.output_tiff == 1;
 	if (m_lr->imgdata.progress_flags & LIBRAW_PROGRESS_CONVERT_RGB)
 	{
-		QString tmpfilename(m_filename);
-		QString ext = QFileInfo(m_filename).suffix();
-		if (!ext.isEmpty())
-		{
-			QRegularExpression re(ext + "$");
-			tmpfilename.replace(re, istiff ? QString("tiff") : QString("ppm"));
-		}
-		else tmpfilename += istiff ? QString(".tiff") : QString(".ppm");
+		QString tmpfilename = (m_lastSavedDir.isEmpty() ? QFileInfo(m_filename).absolutePath() : m_lastSavedDir) + "/" + QFileInfo(m_filename).completeBaseName();
 		QString selectedFilter;
-		QString jpegFilter = tr("Jpeg files(*.jpeg * .jpg)");
+		QString tiff8Filter = tr("Tiff 8-bps files (*.tiff *.tif)");
+		QString ppm16Filter = tr("PPM/PGM 16-bps files (*.ppm *.pgm)");
+		QString ppm8Filter = tr("PPM/PGM 8-bps files (*.ppm *.pgm)");
+		QString jpegFilter = tr("JPEG files(*.jpeg * .jpg)");
 		QString fileName = QFileDialog::getSaveFileName(this,
 			tr("Save processed file..."),
 			tmpfilename,
-			istiff ? tr("Tiff files (*.tiff *.tif);;") + jpegFilter : tr("PPM/PGM files (*.ppm *.pgm)"),
+			tr("Tiff 16bps files (*.tiff *.tif);;") + tiff8Filter + tr(";;") + ppm16Filter + tr(";;") + ppm8Filter + tr(";;") + jpegFilter,
 			&selectedFilter);
 		if (!fileName.isEmpty())
 		{
 			int result = LIBRAW_UNSPECIFIED_ERROR;
-			if (selectedFilter.compare(jpegFilter))
-				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
-			else
+			if (selectedFilter.compare(jpegFilter)==0)
 				result = m_lr->rawlab_jpeg_writer(fileName.toStdString().c_str());
+			else if (selectedFilter.compare(ppm8Filter) == 0)
+			{
+				m_lr->imgdata.params.output_tiff = 0;
+				m_lr->imgdata.params.output_bps = 8;
+				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			}
+			else if (selectedFilter.compare(ppm16Filter) == 0)
+			{
+				m_lr->imgdata.params.output_tiff = 0;
+				m_lr->imgdata.params.output_bps = 16;
+				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			}
+			else if (selectedFilter.compare(tiff8Filter) == 0)
+			{
+				m_lr->imgdata.params.output_tiff = 1;
+				m_lr->imgdata.params.output_bps = 8;
+				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			}
+			else // tiff 16-bps
+			{
+				m_lr->imgdata.params.output_tiff = 1;
+				m_lr->imgdata.params.output_bps = 16;
+				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+			}
 			if (result != LIBRAW_SUCCESS)
 				QMessageBox::critical(this, tr("RawLab error"),
 					QString(m_lr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
+			else
+				m_lastSavedDir = QFileInfo(fileName).absoluteDir().absolutePath();
 		}
 	}
 }
@@ -1993,18 +2011,17 @@ void RawLab::onSavePreview()
 		{
 			if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
 			{
-				QString tmpfilename; // имя файла по умолчанию при вызове диалога Save
+				QString tmpfilename = (m_lastSavedDir.isEmpty()?QFileInfo(m_filename).absolutePath(): m_lastSavedDir) + "/" + QFileInfo(m_filename).completeBaseName();
 				QString filter(tr("All files (*.*)"));
-				QString ext = QFileInfo(m_filename).suffix();
 				switch (pLr->imgdata.thumbnail.tformat)
 				{
 				case LIBRAW_THUMBNAIL_JPEG:
 					filter = tr("Jpeg files (*.jpg)");
-					tmpfilename = ext.isEmpty() ? m_filename + QString(".jpg") : m_filename.replace(QRegularExpression(ext + "$"), QString("jpg"));
+					tmpfilename += QString(".jpg");
 					break;
 				case LIBRAW_THUMBNAIL_BITMAP:
 					filter = tr("Portable Pixelmap files (*.ppm)");
-					tmpfilename = ext.isEmpty() ? m_filename + QString(".ppm") : m_filename.replace(QRegularExpression(ext + "$"), QString("ppm"));
+					tmpfilename += QString(".ppm");
 					break;
 				default:
 					QMessageBox::critical(this, tr("RawLab error"),
@@ -2023,6 +2040,8 @@ void RawLab::onSavePreview()
 					if (result != LIBRAW_SUCCESS)
 						QMessageBox::critical(this, tr("RawLab error"),
 							QString(pLr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
+					else
+						m_lastSavedDir = QFileInfo(fileName).absoluteDir().absolutePath();
 				}
 			}
 			else QMessageBox::critical(this, tr("RawLab error"),
@@ -2099,33 +2118,12 @@ void RawLab::onProcess()
 
 void RawLab::onSettings()
 {
-	std::string tiff = m_settings.getValue(std::string("tiff")); // .compare(std::string("true")) == 0;
-	std::string bps = m_settings.getValue(std::string("bps")); // .compare(std::string("16")) == 0;
 	SettingsDialog dialog(&m_settings, this);
 	if (dialog.exec())
 	{
 		// сохранить новые настройки
 		m_settings.setValue(std::string("lastdir"), dialog.getSaveLastDir().toStdString());
 		m_settings.setValue(std::string("autogreen2"), dialog.getAutoGreen2() ? std::string("true") : std::string("false"));
-		m_settings.setValue(std::string("tiff"), dialog.getTiff() ? std::string("true") : std::string("false"));
-		m_settings.setValue(std::string("bps"), dialog.getBps() ? std::string("16") : std::string("8"));
-		// если обработан RAW файл
-		if ((m_lr->imgdata.progress_flags & LIBRAW_PROGRESS_THUMB_MASK) >= LIBRAW_PROGRESS_PRE_INTERPOLATE)
-		{
-			// и новые настройки отличаются от старых
-			if (tiff.compare(m_settings.getValue(std::string("tiff")))
-				|| bps.compare(m_settings.getValue(std::string("bps"))))
-			{
-				// спросить применить новые настройки или нет (запустить обработку)?
-				QMessageBox msgBox;
-				msgBox.setText("Settings have been changed.");
-				msgBox.setInformativeText("Do you want to process the file with the new settings?");
-				msgBox.setStandardButtons(QMessageBox::Apply | QMessageBox::Cancel);
-				msgBox.setDefaultButton(QMessageBox::Apply);
-				if (msgBox.exec() == QMessageBox::Apply)
-					onProcess();
-			}
-		}
 		return;
 	}
 }
@@ -2133,7 +2131,7 @@ void RawLab::onSettings()
 void RawLab::onAbout()
 {
 	QMessageBox::about(this, APPNAME,
-		QString(APPNAME " ver. %1.%2.%3 build %4"
+		QString(APPNAME " ver. %1.%2.%3 build %4 %5"
 #ifdef _WIN64
 			", x64\n"
 #else
@@ -2145,40 +2143,42 @@ void RawLab::onAbout()
 #endif
 		"Copyright(C) " LEGALCOPYRIGHT "\n"
 		PRODUCTSUPPORT "\n"
-		"\n"
-		"Qt ver. %5\n"
-		"Copyright (C) 2016 The Qt Company Ltd.\n"
-		"\n"
-		"IJG JPEG LIBRARY (libjpeg) ver. %6.%7\n"
-		"Copyright(C) 1991 - 2012, Thomas G.Lane, Guido Vollbeding\n"
 		"\n").
 		arg(QString::number(MAJOR_VER), 
 			QString::number(MINOR_VER), 
 			QString::number(RELEASE_VER), 
-			QString::number(BUILD_VER), 
-			QT_VERSION_STR,
-			QString::number(JPEG_LIB_VERSION_MAJOR), 
-			QString::number(JPEG_LIB_VERSION_MINOR)
+			QString::number(BUILD_VER),
+			QString(NAME_VER)
 		) +
-		QString("GNU LIBICONV ver. %1.%2\n"
+		QString(
+		"Qt ver. %1\n"
+		"Copyright (C) 2016 The Qt Company Ltd.\n"
+		"\n"
+		"IJG JPEG LIBRARY (libjpeg) ver. %2.%3\n"
+		"Copyright(C) 1991 - 2012, Thomas G.Lane, Guido Vollbeding\n"
+		"\n"
+		"GNU LIBICONV ver. %4.%5\n"
 		"Copyright (C) 1999-2019 Free Software Foundation, Inc.\n"
 		"\n"
-		"LIBXML ver. %3\n"
+		"LIBXML ver. %6\n"
 		"Copyright (C) 1998-2012 Daniel Veillard.  All Rights Reserved.\n"
 		"\n"
-		"Little CMS ver. %4\n"
+		"Little CMS ver. %7\n"
 		"Copyright (c) 1998-2011 Marti Maria Saguer\n"
 		"\n"
-		"PTHREADS-WIN32 ver. %5\n"
+		"PTHREADS-WIN32 ver. %8\n"
 		"Copyright(C) 1998 John E. Bossom\n"
 		"Copyright(C) 1999,2005 Pthreads-win32 contributors\n"
 		"\n"
 		"RawSpeed\n"
 		"Copyright (C) 2009 Klaus Post\n"
 		"\n"
-		"LibRaw ver. %6\n"
+		"LibRaw ver. %9\n"
 		"Copyright 2008-2019 LibRaw LLC (info@libraw.org)").
-		arg(QString::number((_LIBICONV_VERSION >> 8) & 0xFF), 
+		arg(QT_VERSION_STR,
+			QString::number(JPEG_LIB_VERSION_MAJOR),
+			QString::number(JPEG_LIB_VERSION_MINOR),
+			QString::number((_LIBICONV_VERSION >> 8) & 0xFF),
 			QString::number(_LIBICONV_VERSION & 0xFF),
 			LIBXML_DOTTED_VERSION,
 			QString::number(LCMS_VERSION / 1000.0),

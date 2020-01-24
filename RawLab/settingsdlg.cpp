@@ -15,8 +15,6 @@ SettingsDialog::SettingsDialog(CSettings* pSettings, QWidget* parent)
 	connect(ui.btnOpenLastDir, SIGNAL(clicked(bool)), this, SLOT(onSelectLastDir()));
 	connect(ui.chbSaveLastDir, SIGNAL(clicked(bool)), this, SLOT(onSaveLastDirClicked(bool)));
 	connect(ui.chbAutoGreen2, SIGNAL(clicked(bool)), this, SLOT(onAutoGreen2Clicked(bool)));
-	connect(ui.chbTiff, SIGNAL(clicked(bool)), this, SLOT(onTiffClicked(bool)));
-	connect(ui.chbBps, SIGNAL(clicked(bool)), this, SLOT(onBpsClicked(bool)));
 
 	if (m_settings)
 	{
@@ -41,10 +39,6 @@ SettingsDialog::SettingsDialog(CSettings* pSettings, QWidget* parent)
 		}
 		m_isAutoGreen2 = m_settings->getValue(std::string("autogreen2")).compare(std::string("true")) == 0;
 		ui.chbAutoGreen2->setChecked(m_isAutoGreen2);
-		m_isTiff = m_settings->getValue(std::string("tiff")).compare(std::string("true")) == 0;
-		ui.chbTiff->setChecked(m_isTiff);
-		m_is16bps = m_settings->getValue(std::string("bps")).compare(std::string("16")) == 0;
-		ui.chbBps->setChecked(m_is16bps);
 	}
 
 }
@@ -80,16 +74,6 @@ bool SettingsDialog::getAutoGreen2()
 	return m_isAutoGreen2;
 }
 
-bool SettingsDialog::getTiff()
-{
-	return m_isTiff;
-}
-
-bool SettingsDialog::getBps()
-{
-	return m_is16bps;
-}
-
 void SettingsDialog::onSaveLastDirClicked(bool checked)
 {
 	m_saveLastDir = checked;
@@ -100,12 +84,3 @@ void SettingsDialog::onAutoGreen2Clicked(bool checked)
 	m_isAutoGreen2 = checked;
 }
 
-void SettingsDialog::onTiffClicked(bool checked)
-{
-	m_isTiff = checked;
-}
-
-void SettingsDialog::onBpsClicked(bool checked)
-{
-	m_is16bps = checked;
-}
