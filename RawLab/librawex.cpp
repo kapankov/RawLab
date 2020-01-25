@@ -305,6 +305,16 @@ int LibRawEx::rawlab_jpeg_writer(const char* filename)
 	return ret;
 }
 
+void LibRawEx::setJpegQuality(int iQuality)
+{
+	m_jpegQuality = iQuality;
+}
+
+int LibRawEx::getJpegQuality()
+{
+	return m_jpegQuality;
+}
+
 #include "libraw/libraw_types.h"
 #define LIBRAW_LIBRARY_BUILD
 #define LIBRAW_IO_REDEFINED

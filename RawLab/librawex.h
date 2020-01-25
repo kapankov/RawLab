@@ -82,16 +82,18 @@ typedef struct
 class LibRawEx : public LibRaw
 {
 	std::unique_ptr<libraw_output_params_t> m_defaultLibrawOutputParamsPtr; // копия исходных параметров Libraw на случай, когда нужно восстановить параметры по умолчанию
+	int m_jpegQuality;
 public:
 	LibRawEx();
 
 	librawex_output_params_t exparams;
 	float auto_mul[4]; // рассчитывается в потоке (color.pre_mul при params.use_auto_wb=1)
-	int m_jpegQuality;
 
 	std::array<float, 4> getAutoWB();
 	void make_tiff_head(struct tiff_hdr* th, int full);
 	int rawlab_jpeg_writer(const char* filename);
+	void setJpegQuality(int iQuality);
+	int getJpegQuality();
 
 	void* getInternalOutputProfile() const
 	{

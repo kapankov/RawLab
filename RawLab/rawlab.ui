@@ -131,9 +131,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-1000</y>
              <width>331</width>
-             <height>1372</height>
+             <height>1391</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -1121,6 +1121,13 @@
              <widget class="Line" name="line_12">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>Noise reduction (NR):</string>
               </property>
              </widget>
             </item>

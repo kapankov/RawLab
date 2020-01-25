@@ -15,6 +15,8 @@ SettingsDialog::SettingsDialog(CSettings* pSettings, QWidget* parent)
 	connect(ui.btnOpenLastDir, SIGNAL(clicked(bool)), this, SLOT(onSelectLastDir()));
 	connect(ui.chbSaveLastDir, SIGNAL(clicked(bool)), this, SLOT(onSaveLastDirClicked(bool)));
 	connect(ui.chbAutoGreen2, SIGNAL(clicked(bool)), this, SLOT(onAutoGreen2Clicked(bool)));
+	connect(ui.sbJpegQual, SIGNAL(valueChanged(int)), this, SLOT(onJpegQualChanged(int)));
+	
 
 	if (m_settings)
 	{
@@ -39,7 +41,13 @@ SettingsDialog::SettingsDialog(CSettings* pSettings, QWidget* parent)
 		}
 		m_isAutoGreen2 = m_settings->getValue(std::string("autogreen2")).compare(std::string("true")) == 0;
 		ui.chbAutoGreen2->setChecked(m_isAutoGreen2);
+		QString jpegQual = QString::fromStdString(m_settings->getValue(std::string("jpegqual")));
+		m_JpegQual = jpegQual.toInt();
+		if (m_JpegQual < JPEGQUALMIN || m_JpegQual > JPEGQUALMAX) m_JpegQual = JPEGQUALDEF;
+		ui.sbJpegQual->setValue(m_JpegQual);
 	}
+	else
+		ui.sbJpegQual->setValue(JPEGQUALDEF);
 
 }
 
@@ -74,6 +82,11 @@ bool SettingsDialog::getAutoGreen2()
 	return m_isAutoGreen2;
 }
 
+int SettingsDialog::getJpegQuality()
+{
+	return m_JpegQual;
+}
+
 void SettingsDialog::onSaveLastDirClicked(bool checked)
 {
 	m_saveLastDir = checked;
@@ -82,5 +95,10 @@ void SettingsDialog::onSaveLastDirClicked(bool checked)
 void SettingsDialog::onAutoGreen2Clicked(bool checked)
 {
 	m_isAutoGreen2 = checked;
+}
+
+void SettingsDialog::onJpegQualChanged(int i)
+{
+	m_JpegQual = i;
 }
 

@@ -330,31 +330,31 @@ RawLab::RawLab(QWidget *parent)
 	ui.sliderBlueCART->setDefaultValue(.0);
 	ui.sliderBlueCART->setValue(.0);
 
-	ui.sliderNoiseReduction->setLabel(tr("Noise reduction:"));
+	ui.sliderNoiseReduction->setLabel(tr("Wavelet denoising:"));
 	ui.sliderNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
 	ui.sliderNoiseReduction->setRange(3000, 0, DECIMAL0);
 	ui.sliderNoiseReduction->setDefaultValue(.0);
 	ui.sliderNoiseReduction->setValue(.0);
 
-	ui.sliderFBDDNoiseReduction->setLabel(tr("FBDD noise reduction:"));
+	ui.sliderFBDDNoiseReduction->setLabel(tr("FBDD NR:"));
 	ui.sliderFBDDNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
 	ui.sliderFBDDNoiseReduction->setRange(2, 0, DECIMAL0);
 	ui.sliderFBDDNoiseReduction->setDefaultValue(.0);
 	ui.sliderFBDDNoiseReduction->setValue(.0);
 
-	ui.sliderLineNoiseReduction->setLabel(tr("Line noise reduction:"));
+	ui.sliderLineNoiseReduction->setLabel(tr("Line NR:"));
 	ui.sliderLineNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
 	ui.sliderLineNoiseReduction->setRange(0.1, .0, DECIMAL3);
 	ui.sliderLineNoiseReduction->setDefaultValue(.0);
 	ui.sliderLineNoiseReduction->setValue(.0);
 
-	ui.sliderLumaNoiseReduction->setLabel(tr("Luma noise reduction:"));
+	ui.sliderLumaNoiseReduction->setLabel(tr("Luma NR:"));
 	ui.sliderLumaNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
 	ui.sliderLumaNoiseReduction->setRange(0.1, .0, DECIMAL3);
 	ui.sliderLumaNoiseReduction->setDefaultValue(.0);
 	ui.sliderLumaNoiseReduction->setValue(.0);
 
-	ui.sliderColorNoiseReduction->setLabel(tr("Color noise reduction:"));
+	ui.sliderColorNoiseReduction->setLabel(tr("Color NR:"));
 	ui.sliderColorNoiseReduction->setGradient(QColor::fromRgb(0x33, 0x33, 0x33), QColor::fromRgb(0xCC, 0xCC, 0xCC));
 	ui.sliderColorNoiseReduction->setRange(0.1, .0, DECIMAL3);
 	ui.sliderColorNoiseReduction->setDefaultValue(.0);
@@ -1967,8 +1967,13 @@ void RawLab::onSave()
 		if (!fileName.isEmpty())
 		{
 			int result = LIBRAW_UNSPECIFIED_ERROR;
-			if (selectedFilter.compare(jpegFilter)==0)
+			if (selectedFilter.compare(jpegFilter) == 0)
+			{
+				int jpegQual = QString::fromStdString(m_settings.getValue(std::string("jpegqual"))).toInt();
+				if (jpegQual < JPEGQUALMIN || jpegQual > JPEGQUALMAX) jpegQual = JPEGQUALDEF;
+				m_lr->setJpegQuality(jpegQual);
 				result = m_lr->rawlab_jpeg_writer(fileName.toStdString().c_str());
+			}
 			else if (selectedFilter.compare(ppm8Filter) == 0)
 			{
 				m_lr->imgdata.params.output_tiff = 0;
@@ -2124,7 +2129,7 @@ void RawLab::onSettings()
 		// сохранить новые настройки
 		m_settings.setValue(std::string("lastdir"), dialog.getSaveLastDir().toStdString());
 		m_settings.setValue(std::string("autogreen2"), dialog.getAutoGreen2() ? std::string("true") : std::string("false"));
-		return;
+		m_settings.setValue(std::string("jpegqual"), QString::number(dialog.getJpegQuality()).toStdString());
 	}
 }
 

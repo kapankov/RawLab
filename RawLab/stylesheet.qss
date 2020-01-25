@@ -13,10 +13,20 @@ border: 2px solid #A0A0A0;
 }
 
 QDialog QLabel {
-color: #C0C0C0;
+color: #E0E0E0;
+}
+
+QDialog QCheckBox{
+color: #E0E0E0;
 }
 
 QDialog QLineEdit {
+	background-color: #A0A0A0;
+	color: #404040;
+	border: 1px solid #606060;
+}
+
+QDialog QSpinBox {
 	background-color: #A0A0A0;
 	color: #404040;
 	border: 1px solid #606060;
