@@ -383,6 +383,7 @@ RawLab::RawLab(QWidget *parent)
 	connect(ui.action_Right, SIGNAL(triggered()), this, SLOT(onMainPanelRight()));
 	connect(ui.actionCMS, SIGNAL(triggered()), this, SLOT(onCms()));
 	connect(ui.action_Settings, SIGNAL(triggered()), this, SLOT(onSettings()));
+	connect(ui.actionCamList, SIGNAL(triggered()), this, SLOT(onCamList()));
 	connect(ui.action_About, SIGNAL(triggered()), this, SLOT(onAbout()));
 
 	connect(ui.openGLWidget, SIGNAL(imageChanged(RgbBuff*)), ui.histogram, SLOT(onImageChanged(RgbBuff*)));
@@ -2131,6 +2132,12 @@ void RawLab::onSettings()
 		m_settings.setValue(std::string("autogreen2"), dialog.getAutoGreen2() ? std::string("true") : std::string("false"));
 		m_settings.setValue(std::string("jpegqual"), QString::number(dialog.getJpegQuality()).toStdString());
 	}
+}
+
+void RawLab::onCamList()
+{
+	CamListDialog dialog(LibRaw::cameraList(), this);
+	dialog.exec();
 }
 
 void RawLab::onAbout()

@@ -123,6 +123,9 @@
     <ClCompile Include="nowheel_combobox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="camlistdlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -192,6 +195,9 @@
     <QtMoc Include="nowheel_combobox.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="camlistdlg.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <None Include="version.rc2" />
@@ -201,6 +207,9 @@
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="settingsdlg.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="camlistdlg.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

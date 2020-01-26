@@ -131,7 +131,7 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-1000</y>
+             <y>0</y>
              <width>331</width>
              <height>1391</height>
             </rect>
@@ -1351,6 +1351,7 @@
     <property name="title">
      <string>&amp;Help</string>
     </property>
+    <addaction name="actionCamList"/>
     <addaction name="action_About"/>
    </widget>
    <widget class="QMenu" name="menu_View">
@@ -1684,6 +1685,16 @@
    </property>
    <property name="text">
     <string>&amp;Right</string>
+   </property>
+  </action>
+  <action name="actionCamList">
+   <property name="icon">
+    <iconset>
+     <normalon>:/images/Resources/camlist.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>List of supported cameras</string>
    </property>
   </action>
  </widget>

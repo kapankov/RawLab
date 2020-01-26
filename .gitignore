@@ -268,10 +268,12 @@ __pycache__/
 /RawSpeed
 *.exe
 *.iss
-/Setup/*.bmp
+/Setup/*
 /BuildAll.txt
 /Changelog.txt
 /HowToBuild.txt
 /ToDo.txt
 /RawLab/*.jpg
 /Setup/gpl-3.0.rtf
+/*.bat
+/*.crt

@@ -208,6 +208,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="bitmap.cpp" />
+    <ClCompile Include="camlistdlg.cpp" />
     <ClCompile Include="cms.cpp" />
     <ClCompile Include="color_math.cpp" />
     <ClCompile Include="GeneratedFiles\qrc_rawlab.cpp">
@@ -319,6 +320,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bitmap.h" />
+    <QtMoc Include="camlistdlg.h">
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);.\..\jpeg-9c;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL</IncludePath>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.;$(QTDIR)\include;.\GeneratedFiles;.\GeneratedFiles\$(ConfigurationName);.\..\jpeg-9c;.\..\libxml2-2.9.9\include;.\..\libiconv-1.16\include;.\..\lcms2-2.9\include;.\..\RawSpeed\pthreads;.\..\libraw;.\LibRaw-demosaic-pack;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtOpenGL</IncludePath>
+    </QtMoc>
     <ClInclude Include="cms.h" />
     <ClInclude Include="color_math.h" />
     <ClInclude Include="common_types.h" />
@@ -415,6 +422,7 @@
     <None Include="version.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <QtUic Include="camlistdlg.ui" />
     <QtUic Include="settingsdlg.ui" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

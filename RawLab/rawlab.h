@@ -124,6 +124,7 @@ public slots:
 	void onExit();
 	void onProcess();
 	void onSettings();
+	void onCamList();
 	void onAbout();
 	// Переключение вкладок Process-Properties (Ctrl+Tab)
 	void onNextLeftPanel();
