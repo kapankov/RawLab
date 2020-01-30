@@ -79,6 +79,7 @@ public:
 	RenderWidget(QWidget *parent = 0);
 	~RenderWidget();
 
+	void ClearView();
 	bool setRgbBuff(RgbBuffPtr&& ptr);
 	void setEmptyLabel(const QString& label);
 	void enableCms(bool enable);

@@ -67,7 +67,7 @@ void CProcessThread::process()
 		libraw_data_t& imgdata = m_lr->imgdata;
 		auto& progress_flags = imgdata.progress_flags;
 		if (progress_flags == 0)
-			result = m_lr->open_file(m_filename.toStdString().c_str());
+			result = m_lr->open_file(toStdString(m_filename).c_str());
 		bool fFileUnpacked = !((progress_flags & LIBRAW_PROGRESS_THUMB_MASK) < LIBRAW_PROGRESS_LOAD_RAW);
 
 		if (result == LIBRAW_SUCCESS)
@@ -83,11 +83,11 @@ void CProcessThread::process()
 
 					emit setProgress(tr("Processed in %1 sec.").arg(elapsed.count(), 0, 'f', 2));
 				}
-				else throw RawLabException(QString(QString("LibRaw dcraw_process error: %1").arg(LibRaw::strerror(result))).toStdString());
+				else throw RawLabException(toStdString(tr("LibRaw dcraw_process error: %1").arg(LibRaw::strerror(result))));
 			}
-			else throw RawLabException(QString(QString("LibRaw unpack error: %1").arg(LibRaw::strerror(result))).toStdString());
+			else throw RawLabException(toStdString(tr("LibRaw unpack error: %1").arg(LibRaw::strerror(result))));
 		}
-		else throw RawLabException(QString(QString("LibRaw open_file error: %1").arg(LibRaw::strerror(result))).toStdString());
+		else throw RawLabException(toStdString(tr("LibRaw open_file error: %1").arg(LibRaw::strerror(result))));
 	}
 	catch (const RawLabException & e)
 	{

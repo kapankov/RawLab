@@ -20,6 +20,14 @@ RenderWidget::~RenderWidget()
 {
 }
 
+void RenderWidget::ClearView()
+{
+	m_pImgBuff.reset(nullptr);
+	// сообщить об изменении картинки (например, для создания гистограммы в приложении)
+	emit imageChanged(m_pImgBuff.get());
+	UpdateImage();
+}
+
 bool RenderWidget::setRgbBuff(RgbBuffPtr&& ptr)
 {
 	m_pImgBuff = std::move(ptr);
@@ -109,7 +117,7 @@ bool RenderWidget::UpdateImage(bool resetZoom)
 					pCmsImgBuff->m_height,
 					pCmsImgBuff->m_bits,
 					pCmsImgBuff->m_profile,
-					const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : m_MonitorProfilePath.toStdString().c_str()));
+					const_cast<char*>(m_MonitorProfilePath.isEmpty() ? nullptr : toStdString(m_MonitorProfilePath).c_str()));
 				pixels = pCmsImgBuff->m_buff;
 			}
 

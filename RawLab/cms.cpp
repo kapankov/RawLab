@@ -35,7 +35,6 @@ void* getProfile(cmsHPROFILE hProfile)
 			cmsSaveProfileToMem(hProfile, MemPtr, &BytesNeeded);
 		}
 	}
-	cmsCloseProfile(hProfile);
 	return MemPtr;
 }
 

@@ -103,9 +103,9 @@ RawLab::RawLab(QWidget *parent)
 	if (!QDir(appDataPath).exists())
 		QDir().mkdir(appDataPath);
 
-	m_settings.setPath(appDataPath.toStdString());
+	m_settings.setPath(toStdString(appDataPath));
 	m_settings.setDefaultValue(std::string("lastdir"),
-		QFileInfo(QCoreApplication::applicationFilePath()).path().toStdString());
+		toStdString(QFileInfo(QCoreApplication::applicationFilePath()).path()));
 	m_settings.setDefaultValue(std::string("autogreen2"), std::string("true"));
 	m_settings.setDefaultValue(std::string("cms"), std::string("1")); // CMS is On
 	m_settings.setDefaultValue(std::string("pnlpos"), std::string("left")); // main panel position
@@ -490,7 +490,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 {
 	bool result = false;
 	std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
-	if (pLr->open_file(filename.toStdString().c_str()) == LIBRAW_SUCCESS)
+	if (pLr->open_file(toStdString(filename).c_str()) == LIBRAW_SUCCESS)
 	{
 		// ==> в статус файл открыт
 		m_filename = filename;
@@ -504,7 +504,7 @@ bool RawLab::setImageRawFile(const QString &  filename)
 		result = ExtractAndShowPreview(std::move(pLr));
 		if (result) ui.actionPreview->setChecked(true);
 	}
-	else throw RawLabException(QString(tr("Unknown RAW format")).toStdString());
+	else throw RawLabException(toStdString(tr("Unknown RAW format")));
 	return result;
 }
 
@@ -529,7 +529,25 @@ void RawLab::ExtractProcessedRaw()
 	if (stride & 3) stride += SIZEOFDWORD - stride & 3; // DWORD aligned
 
 	m_pRawBuff = std::make_unique<RgbBuff>();
-	m_pRawBuff->m_buff = new unsigned char[stride * static_cast<size_t>(height)];
+	try
+	{
+		m_pRawBuff->m_buff = new unsigned char[stride * static_cast<size_t>(height)];
+	}
+	catch (const std::bad_alloc & e)
+	{
+		ui.openGLWidget->ClearView();
+		// try again
+		try
+		{
+			m_pRawBuff->m_buff = new unsigned char[stride * static_cast<size_t>(height)];
+		}
+		catch (const std::bad_alloc & e)
+		{
+			QMessageBox::critical(this, tr("RawLab error"),
+				tr("Out of memory for processed RAW."));
+			return;
+		}
+	}
 
 	libraw_output_params_t& params = imgdata.params;
 	int ibps = params.output_bps;
@@ -662,7 +680,7 @@ void RawLab::ApplyParams()
 	default:
 		// use input profile (camera_profile)
 		params.use_camera_matrix = 0;
-		m_inputProfile = (getInputProfilesDir() + "/" + ui.cmbInputProfile->currentText()).toStdString();
+		m_inputProfile = toStdString(getInputProfilesDir() + "/" + ui.cmbInputProfile->currentText());
 		params.camera_profile = const_cast<char*>(m_inputProfile.c_str());
 		break;
 	}
@@ -673,7 +691,7 @@ void RawLab::ApplyParams()
 	else
 	{
 		params.output_color = 1;
-		m_outputProfile = (getOutputProfilesDir() + "/" + ui.cmbOutProfile->currentText()).toStdString();
+		m_outputProfile = toStdString(getOutputProfilesDir() + "/" + ui.cmbOutProfile->currentText());
 		params.output_profile = const_cast<char*>(m_outputProfile.c_str());
 	}
 	// interpolation
@@ -787,14 +805,14 @@ void RawLab::ApplyParams()
 
 	if (ui.cmbBadPixMap->currentIndex() > 0)
 	{
-		m_badPixMap = (getOutputProfilesDir() + "/" + ui.cmbBadPixMap->currentText()).toStdString();
+		m_badPixMap = toStdString(getOutputProfilesDir() + "/" + ui.cmbBadPixMap->currentText());
 		params.bad_pixels = const_cast<char*>(m_badPixMap.c_str());
 	}
 	else params.bad_pixels = nullptr;
 
 	if (ui.cmbDarkFrame->currentIndex() > 0)
 	{
-		m_darkFrame = (getOutputProfilesDir() + "/" + ui.cmbDarkFrame->currentText()).toStdString();
+		m_darkFrame = toStdString(getOutputProfilesDir() + "/" + ui.cmbDarkFrame->currentText());
 		params.dark_frame = const_cast<char*>(m_darkFrame.c_str());
 	}
 	else params.dark_frame = nullptr;
@@ -1354,7 +1372,7 @@ void RawLab::openFile(const QString& filename)
 			try
 			{
 				if (!setImageRawFile(filename))
-					throw RawLabException(QString(tr("Unable to open RAW file:\n%1").arg(filename)).toStdString());
+					throw RawLabException(toStdString(tr("Unable to open RAW file:\n%1").arg(filename)));
 			}
 			catch (const RawLabException& e)
 			{
@@ -1433,11 +1451,11 @@ void RawLab::onOpen()
 				"Samsung RAW files (*.srw);;"
 				"Sigma/Foveon RAW files (*.x3f);;"
 				"Jpeg Files (*.jpeg *.jpg);;"
-				"All Files (*.*)")); // .toStdString();
+				"All Files (*.*)"));
 		if (!fileName.isEmpty())
 		{
 			if (!fDontSaveLastDir)
-				m_settings.setValue(std::string("lastdir"), QFileInfo(fileName).dir().absolutePath().toStdString());
+				m_settings.setValue(std::string("lastdir"), QFileInfo(fileName).dir().absolutePath().toStdString()); // its OK, UTF8 for xml
 			openFile(fileName);
 		}
 	}
@@ -1935,10 +1953,10 @@ bool RawLab::ExtractAndShowPreview(const std::unique_ptr<LibRawEx>& pLr)
 				result = ui.openGLWidget->setRgbBuff(std::move(GetAlignedBufFromBitmap(&buff, true)));
 				buff.m_buff = nullptr; // Обязательно! Иначе будет освобождение памяти через delete
 			}
-			else throw RawLabException(QString(tr("Unknown preview image format")).toStdString());
+			else throw RawLabException(toStdString(tr("Unknown preview image format")));
 			pLr->dcraw_clear_mem(mem_thumb);
 		}
-		else throw RawLabException(QString(tr("Failed to create a preview image in memory: error code %1")).arg(LibRaw::strerror(errcode)).toStdString());
+		else throw RawLabException(toStdString(tr("Failed to create a preview image in memory: error code %1").arg(LibRaw::strerror(errcode))));
 	}
 	else
 	{
@@ -1973,31 +1991,31 @@ void RawLab::onSave()
 				int jpegQual = QString::fromStdString(m_settings.getValue(std::string("jpegqual"))).toInt();
 				if (jpegQual < JPEGQUALMIN || jpegQual > JPEGQUALMAX) jpegQual = JPEGQUALDEF;
 				m_lr->setJpegQuality(jpegQual);
-				result = m_lr->rawlab_jpeg_writer(fileName.toStdString().c_str());
+				result = m_lr->rawlab_jpeg_writer(toStdString(fileName).c_str());
 			}
 			else if (selectedFilter.compare(ppm8Filter) == 0)
 			{
 				m_lr->imgdata.params.output_tiff = 0;
 				m_lr->imgdata.params.output_bps = 8;
-				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+				result = m_lr->dcraw_ppm_tiff_writer(toStdString(fileName).c_str());
 			}
 			else if (selectedFilter.compare(ppm16Filter) == 0)
 			{
 				m_lr->imgdata.params.output_tiff = 0;
 				m_lr->imgdata.params.output_bps = 16;
-				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+				result = m_lr->dcraw_ppm_tiff_writer(toStdString(fileName).c_str());
 			}
 			else if (selectedFilter.compare(tiff8Filter) == 0)
 			{
 				m_lr->imgdata.params.output_tiff = 1;
 				m_lr->imgdata.params.output_bps = 8;
-				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+				result = m_lr->dcraw_ppm_tiff_writer(toStdString(fileName).c_str());
 			}
 			else // tiff 16-bps
 			{
 				m_lr->imgdata.params.output_tiff = 1;
 				m_lr->imgdata.params.output_bps = 16;
-				result = m_lr->dcraw_ppm_tiff_writer(fileName.toStdString().c_str());
+				result = m_lr->dcraw_ppm_tiff_writer(toStdString(fileName).c_str());
 			}
 			if (result != LIBRAW_SUCCESS)
 				QMessageBox::critical(this, tr("RawLab error"),
@@ -2013,7 +2031,7 @@ void RawLab::onSavePreview()
 	if (!m_filename.isEmpty())
 	{
 		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
-		if (pLr->open_file(m_filename.toStdString().c_str()) == LIBRAW_SUCCESS)
+		if (pLr->open_file(toStdString(m_filename).c_str()) == LIBRAW_SUCCESS)
 		{
 			if (pLr->unpack_thumb() == LIBRAW_SUCCESS)
 			{
@@ -2042,7 +2060,7 @@ void RawLab::onSavePreview()
 				if (!fileName.isEmpty())
 				{
 					// сохраняем как в dcraw
-					int result = pLr->dcraw_thumb_writer(fileName.toStdString().c_str());
+					int result = pLr->dcraw_thumb_writer(toStdString(fileName).c_str());
 					if (result != LIBRAW_SUCCESS)
 						QMessageBox::critical(this, tr("RawLab error"),
 							QString(pLr->strerror(result)) + QString(tr("\nfile:\n")) + fileName);
@@ -2075,7 +2093,7 @@ void RawLab::onProcess()
 	}
 	{
 		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
-		if (pLr->open_file(m_filename.toStdString().c_str()) != LIBRAW_SUCCESS)
+		if (pLr->open_file(toStdString(m_filename).c_str()) != LIBRAW_SUCCESS)
 		{
 			QMessageBox::critical(this, tr("RawLab error"),
 				QString(tr("Unable to process this file:\n")) + m_filename);
@@ -2128,7 +2146,7 @@ void RawLab::onSettings()
 	if (dialog.exec())
 	{
 		// сохранить новые настройки
-		m_settings.setValue(std::string("lastdir"), dialog.getSaveLastDir().toStdString());
+		m_settings.setValue(std::string("lastdir"), toStdString(dialog.getSaveLastDir()));
 		m_settings.setValue(std::string("autogreen2"), dialog.getAutoGreen2() ? std::string("true") : std::string("false"));
 		m_settings.setValue(std::string("jpegqual"), QString::number(dialog.getJpegQuality()).toStdString());
 	}
@@ -2238,7 +2256,7 @@ void RawLab::onShowPreview()
 	if (!m_filename.isEmpty())
 	{
 		std::unique_ptr<LibRawEx> pLr = std::make_unique<LibRawEx>();
-		if (pLr->open_file(m_filename.toStdString().c_str()) == LIBRAW_SUCCESS)
+		if (pLr->open_file(toStdString(m_filename).c_str()) == LIBRAW_SUCCESS)
 			if (ExtractAndShowPreview(std::move(pLr)))
 			{
 				ui.actionProcessed_RAW->setChecked(false);

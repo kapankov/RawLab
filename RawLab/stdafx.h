@@ -27,6 +27,8 @@
 #include "libraw/libraw.h"
 #pragma warning(pop)
 
+std::string toStdString(QString str);
+
 #include "common_types.h"
 #include "cms.h"
 #include "color_math.h"
